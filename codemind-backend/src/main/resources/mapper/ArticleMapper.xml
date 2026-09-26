@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.codemind.community.mapper.ArticleMapper">
+
+    <resultMap id="BaseResultMap" type="com.codemind.community.entity.Article">
+            <id property="id" column="id" jdbcType="BIGINT"/>
+            <result property="userId" column="user_id" jdbcType="BIGINT"/>
+            <result property="title" column="title" jdbcType="VARCHAR"/>
+            <result property="content" column="content" jdbcType="VARCHAR"/>
+            <result property="summary" column="summary" jdbcType="VARCHAR"/>
+            <result property="cover" column="cover" jdbcType="VARCHAR"/>
+            <result property="viewCount" column="view_count" jdbcType="BIGINT"/>
+            <result property="likeCount" column="like_count" jdbcType="BIGINT"/>
+            <result property="favoriteCount" column="favorite_count" jdbcType="BIGINT"/>
+            <result property="status" column="status" jdbcType="TINYINT"/>
+            <result property="createTime" column="create_time" jdbcType="TIMESTAMP"/>
+            <result property="updateTime" column="update_time" jdbcType="TIMESTAMP"/>
+            <result property="isDelete" column="is_delete" jdbcType="TINYINT"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id,user_id,title,
+        content,summary,cover,
+        view_count,like_count,favorite_count,
+        status,create_time,update_time,
+        is_delete
+    </sql>
+
+    <select id="AiqueryArticleList" resultType="com.codemind.ai.vo.SearchArticleData">
+        select DISTINCT
+            a.id,
+            a.title,
+            a.summary,
+            a.view_count,
+            a.like_count,
+            a.favorite_count,
+            a.create_time,
+            u.user_name as author
+        from article a
+            LEFT JOIN user u on u.id = a.user_id
+            LEFT JOIN article_tag at on a.id = at.article_id
+            LEFT JOIN tag t ON at.tag_id=t.id
+        <where>
+            a.is_delete = 0 and a.status = 1
+            <if test="tagName != null and tagName != ''">
+                and t.name like CONCAT('%', #{tagName}, '%')
+            </if>
+            <if test="keyWord != null and keyWord != ''">
+                and (a.title like CONCAT('%', #{keyWord}, '%')
+                or a.summary like CONCAT('%', #{keyWord}, '%'))
+            </if>
+            <if test="author !=null and author != ''">
+                and u.user_name like CONCAT('%', #{author}, '%')
+            </if>
+        </where>
+        <choose>
+            <when test="sort == 'latest'">
+                ORDER BY a.create_time DESC
+            </when>
+            <when test= "sort == 'hot'">
+                ORDER BY a.view_count DESC
+            </when>
+            <otherwise>
+                ORDER BY a.create_time DESC
+            </otherwise>
+        </choose>
+        limit #{limit}
+    </select>
+    <select id="linkArticle" resultType="com.codemind.ai.vo.SearchArticleData">
+        select DISTINCT
+        a.id,
+        a.title,
+        a.summary,
+        a.view_count,
+        a.like_count,
+        a.favorite_count,
+        a.create_time,
+        u.user_name as author
+        from article a
+        LEFT JOIN user u on u.id = a.user_id
+        LEFT JOIN article_tag at on a.id = at.article_id
+        LEFT JOIN tag t ON at.tag_id=t.id
+        <where>
+            a.is_delete = 0 and a.status = 1
+            <if test="listName != null and listName.size() > 0">
+                AND (
+                <foreach collection="listName"
+                         item="keyword"
+                         separator=" OR ">
+                    a.title LIKE CONCAT('%', #{keyword}, '%')
+                    OR a.summary LIKE CONCAT('%', #{keyword}, '%')
+                </foreach>
+                )
+            </if>
+        </where>
+        limit #{limit}
+    </select>
+</mapper>

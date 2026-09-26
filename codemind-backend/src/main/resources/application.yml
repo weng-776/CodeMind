@@ -1,0 +1,132 @@
+server:
+  port: 8080
+
+
+jwt:
+  token:
+    tokenExpiration: 120
+    tokenSignKey: ${JWT_SECRET}
+
+
+
+spring:
+  #ai模块
+  ai: #向量数据库
+    vectorstore:
+      milvus:
+        client:
+          host: 127.0.0.1
+          port: 19530
+          username: ${MILVUS_NAME}
+          password: ${MILVUS_PASSWORD}
+        database-name: "default"
+        collection-name: "vector_store"
+        embedding-dimension: 1024
+        index-type: ivf_flat
+        metric-type: cosine
+        initialize-schema: true
+    openai:
+      #向量模型
+      embedding:
+        base-url: https://dashscope.aliyuncs.com/compatible-mode
+        api-key: ${ALI_API_KEY}
+        options:
+          model: qwen3.7-text-embedding-flash
+          dimensions: 1024
+      api-key: sdadas #随便填的
+    #对话模型
+    deepseek:
+      chat:
+        api-key: ${DS_API_KEY}
+        base-url: https://api.deepseek.com
+        options:
+          model: deepseek-v4-flash
+          temperature: 0.8
+    chat:
+      memory:
+        repository:
+          jdbc:
+            initialize-schema: always #自动建表
+            schema: classpath:sql/schema-mysql.sql #建表脚本
+
+    #AI 调用（chat / embedding）的重试策略
+    retry:
+      max-attempts: 3 #默认 10
+      on-client-errors: false #4xx（参数错/鉴权错）重试没意义 —— 保持默认值，写出来是为了明确策略
+      backoff:
+        initial-interval: 1s #默认 2s
+        multiplier: 2 #默认 5，涨得太陡
+        max-interval: 5s #默认 180s（3 分钟）
+
+  #Rabbitmq配置
+  rabbitmq:
+    host: ${RABBITMQ_HOST}
+    port: 5672
+    username: guest
+    password: 123456
+    virtual-host: /
+    listener:
+      simple:
+#        retry:
+#          enabled: true  # 开启消费者失败重试
+#          initial-interval: 1000ms # 初识的失败等待时长为1秒
+#          multiplier: 1 # 失败的等待时长倍数，下次等待时长 = multiplier * last-interval
+#          max-attempts: 3 #最大重试次数
+        acknowledge-mode: manual #手动ack
+  #配置上传文件的大小
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 6MB
+  data:
+    redis: #redis信息
+      host: ${REDIS_HOST}
+      port: 6379
+      password: ${REDIS_PASSWORD}
+  #配置json处理时间日期格式
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: GMT+8
+    #数据库连接
+  datasource:
+    type: com.zaxxer.hikari.HikariDataSource
+    url: jdbc:mysql://localhost:3306/codemind?useUnicode=true&characterEncoding=utf-8&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=GMT%2b8
+    username: ${MYSQL_USERNAME}
+    password: ${MYSQL_PASSWORD}
+    hikari:
+      connection-test-query: SELECT 1 # 自动检测连接
+      connection-timeout: 60000 #数据库连接超时时间,默认30秒
+      idle-timeout: 500000 #空闲连接存活最大时间，默认600000（10分钟）
+      max-lifetime: 540000 #此属性控制池中连接的最长生命周期，值0表示无限生命周期，默认1800000即30分钟
+      maximum-pool-size: 12 #连接池最大连接数，默认是10
+      minimum-idle: 10 #最小空闲连接数量
+      pool-name: SPHHikariPool # 连接池名称
+
+
+
+mybatis-plus:
+  configuration:
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl #用于打印框架生成的sql语句，便于调试
+    auto-mapping-behavior: full #开启嵌套自动映射
+    # 开启下划线转驼峰映射（默认就是 true）
+    map-underscore-to-camel-case: true
+
+
+minio:
+  endpoint: ${MINIO_ENDPOINT}
+  access-key: ${MINIO_ACCESS_KEY}
+  secret-key:  ${MINIO_SECRET_KEY}
+  bucket-name: codemind
+
+logging:
+  #日志落盘。
+  file:
+    name: logs/codemind.log
+  logback:
+    rollingpolicy:
+      max-file-size: 50MB
+      max-history: 7
+      total-size-cap: 500MB
+  level:
+    org.springframework.ai: debug # AI对话的日志级别
+    com.codemind.ai: debug # 本项目的日志级别

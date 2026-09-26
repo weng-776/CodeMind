@@ -1,0 +1,225 @@
+/**
+ * Element Plus 局部覆写
+ * ------------------------------------------------------------------
+ * tokens.css 已经通过 CSS 变量替换了 EP 的色板，这里只处理
+ * 「变量改不了」的形态问题：圆角、字重、按钮高度、表格头等，
+ * 目的是去掉 EP 默认的「后台管理」观感。
+ */
+
+/* ============ 按钮：更收敛的字重与高度 ============ */
+.el-button {
+  font-weight: 500;
+  border-radius: var(--cm-radius-md);
+  transition:
+    background-color var(--cm-duration-fast) var(--cm-ease-out),
+    border-color var(--cm-duration-fast) var(--cm-ease-out),
+    color var(--cm-duration-fast) var(--cm-ease-out);
+}
+
+/* 触觉反馈：按下时轻微缩放 */
+.el-button:active {
+  transform: scale(0.985);
+}
+
+/**
+ * 实心主按钮配色
+ * ------------------------------------------------------------------
+ * 这里的变量必须用「双类名」提高优先级。
+ *
+ * 原因：Element Plus 自己的 `.el-button--primary` 也声明了同名变量，
+ * 而它的样式表是在运行时注入的、顺序在我们之后 —— 同等优先级下后写的赢，
+ * 单写 `.el-button--primary` 会被它覆盖（实测按钮背景变成灰色 #f0f0f0）。
+ * 提升一个类名的优先级后，无论加载顺序如何我们的值都生效。
+ *
+ * ⚠️ 必须带 `:not(...)` 排除所有变体（is-plain / is-text / is-link）
+ * ------------------------------------------------------------------
+ * 这条规则只声明 bg / border 系列变量，**不声明文字色**。
+ * 而 EP 的变体（如 `.el-button--primary.is-plain`）恰恰是「文字用主色 + 底色用浅色」：
+ *   - plain：bg = --el-color-primary-light-9（浅）、text = --el-color-primary（主色）
+ *   - text / link：bg = transparent、text = 主色
+ * 一旦被本规则把 bg 覆盖成实心的 --cm-accent-600，而文字仍是主色
+ * → **主色底 + 主色字，文字完全不可见**。
+ *
+ * 实测（2026-09-23）：ErrorState 的「重新加载」按钮就渲染成一个纯蓝方块，
+ * 放大证据见 docs/screenshots/t2-6-retry-button-blue-on-blue.png。
+ *
+ * 排除变体后，plain / text / link 会退回 EP 自己的变量，
+ * 而 tokens.css 已把 EP 色板映射到 cm 色板，着色自然正确 —— 不需要在这里重复写颜色。
+ */
+.el-button.el-button--primary:not(.is-plain):not(.is-text):not(.is-link) {
+  --el-button-bg-color: var(--cm-accent-600);
+  --el-button-border-color: var(--cm-accent-600);
+  --el-button-hover-bg-color: var(--cm-accent-500);
+  --el-button-hover-border-color: var(--cm-accent-500);
+  --el-button-active-bg-color: var(--cm-accent-700);
+  --el-button-active-border-color: var(--cm-accent-700);
+}
+
+/* 文字按钮不要那么抢眼 */
+.el-button.is-text,
+.el-button.is-link {
+  font-weight: 400;
+}
+
+/* ============ 输入框：去掉厚重内阴影 ============ */
+.el-input__wrapper,
+.el-textarea__inner {
+  border-radius: var(--cm-radius-md);
+  box-shadow: 0 0 0 1px var(--cm-border-default) inset;
+  transition: box-shadow var(--cm-duration-fast) var(--cm-ease-out);
+}
+
+.el-input__wrapper:hover,
+.el-textarea__inner:hover {
+  box-shadow: 0 0 0 1px var(--cm-border-strong) inset;
+}
+
+.el-input__wrapper.is-focus,
+.el-textarea__inner:focus {
+  box-shadow: 0 0 0 1px var(--cm-accent-500) inset;
+}
+
+/* ============ 卡片：去掉边框 + 阴影的双重叠加 ============ */
+.el-card {
+  border: 1px solid var(--cm-border-subtle);
+  border-radius: var(--cm-radius-lg);
+  box-shadow: none;
+}
+
+.el-card__header {
+  border-bottom: 1px solid var(--cm-border-subtle);
+  padding: var(--cm-space-4) var(--cm-space-5);
+  font-weight: 600;
+}
+
+.el-card__body {
+  padding: var(--cm-space-5);
+}
+
+/* ============ 表格：轻量化表头 ============ */
+.el-table th.el-table__cell {
+  background-color: var(--cm-bg-subtle);
+  font-weight: 600;
+  color: var(--cm-text-secondary);
+  font-size: var(--cm-font-size-sm);
+}
+
+.el-table {
+  --el-table-border-color: var(--cm-border-subtle);
+  font-size: var(--cm-font-size-base);
+}
+
+/* ============ 分页 ============ */
+.el-pagination {
+  --el-pagination-button-bg-color: transparent;
+  font-weight: 400;
+}
+
+.el-pagination.is-background .el-pager li {
+  border-radius: var(--cm-radius-sm);
+  font-weight: 400;
+}
+
+/* ============ 标签：不要全圆角胶囊堆叠 ============ */
+.el-tag {
+  border-radius: var(--cm-radius-sm);
+  font-weight: 500;
+}
+
+/* ============ 弹窗 / 抽屉 ============ */
+.el-dialog {
+  border-radius: var(--cm-radius-xl);
+  box-shadow: var(--cm-shadow-lg);
+}
+
+.el-dialog__header {
+  margin-right: 0;
+  padding: var(--cm-space-5) var(--cm-space-6);
+  border-bottom: 1px solid var(--cm-border-subtle);
+}
+
+.el-dialog__title {
+  font-size: var(--cm-font-size-lg);
+  font-weight: 600;
+}
+
+.el-dialog__body {
+  padding: var(--cm-space-6);
+}
+
+.el-dialog__footer {
+  padding: var(--cm-space-4) var(--cm-space-6);
+  border-top: 1px solid var(--cm-border-subtle);
+}
+
+.el-drawer__header {
+  margin-bottom: 0;
+  padding: var(--cm-space-4) var(--cm-space-5);
+  border-bottom: 1px solid var(--cm-border-subtle);
+  font-weight: 600;
+  color: var(--cm-text-primary);
+}
+
+/* ============ 下拉菜单 ============ */
+.el-dropdown-menu__item {
+  font-size: var(--cm-font-size-base);
+}
+
+/* ============ 消息提示：去掉喧闹感 ============ */
+.el-message {
+  border-radius: var(--cm-radius-lg);
+  box-shadow: var(--cm-shadow-md);
+  border-width: 1px;
+}
+
+/* ============ 菜单：去掉默认选中态的整块高亮 ============ */
+.el-menu {
+  border-right: none;
+}
+
+/* ============ Tabs：下划线更细、字重过渡更稳 ============ */
+.el-tabs__item {
+  font-weight: 500;
+  font-size: var(--cm-font-size-md);
+}
+
+.el-tabs__nav-wrap::after {
+  height: 1px;
+}
+
+/* ============ 空状态 ============ */
+.el-empty__description p {
+  color: var(--cm-text-tertiary);
+}
+
+/* ============ 头像 ============ */
+.el-avatar {
+  --el-avatar-bg-color: var(--cm-gray-300);
+  font-weight: 500;
+}
+
+/* ============ 上传 ============ */
+.el-upload {
+  width: 100%;
+}
+
+/* ============ 骨架屏 ============ */
+.el-skeleton__item {
+  background: linear-gradient(
+    90deg,
+    var(--cm-gray-100) 25%,
+    var(--cm-gray-200) 37%,
+    var(--cm-gray-100) 63%
+  );
+}
+
+/* ============ 表单：标签在上，错误在下 ============ */
+.el-form-item__label {
+  font-weight: 500;
+  color: var(--cm-text-secondary);
+  padding-bottom: var(--cm-space-1);
+}
+
+.el-form-item__error {
+  padding-top: var(--cm-space-1);
+}

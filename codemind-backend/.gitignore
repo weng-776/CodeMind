@@ -1,0 +1,72 @@
+target/
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+.kotlin
+
+### IntelliJ IDEA ###
+.idea/modules.xml
+.idea/jarRepositories.xml
+.idea/compiler.xml
+.idea/libraries/
+*.iws
+*.iml
+*.ipr
+
+### Eclipse ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+### VS Code ###
+.vscode/
+
+### Mac OS ###
+.DS_Store
+
+### ── 本项目追加（2026-09-26）─────────────────────────────
+
+### 运行日志
+### application.yml 里配了 logging.file.name: logs/codemind.log，
+### 跑一次应用就会重建这个目录；里面有完整请求与提示词，不能传
+logs/
+*.log
+
+### AI 工具产生的本地数据
+### 里面有 MySQL / Redis / MinIO / Milvus 的明文凭据，绝对不能传
+.workbuddy/
+.workbuddy-ai/
+.mimocode/
+
+### 本地环境变量文件（密钥放这里，绝不传）
+.env
+.env.local
+!.env.example
+
+### 本机专用配置覆盖
+application-local.yml
+application-local.yaml
+
+### 保险：.idea 里属于「本机私有」的文件
+### （IntelliJ 自带的 .idea/.gitignore 已经忽略了这些，
+###   这里再写一遍是为了防止哪天手滑把那个文件删了）
+.idea/workspace.xml
+.idea/shelf/
+.idea/dataSources.xml
+.idea/dataSources.local.xml
+.idea/dataSources/
+.idea/httpRequests/

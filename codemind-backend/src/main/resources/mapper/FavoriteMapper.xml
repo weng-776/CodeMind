@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.codemind.community.mapper.FavoriteMapper">
+
+    <resultMap id="BaseResultMap" type="com.codemind.community.entity.Favorite">
+            <id property="id" column="id" jdbcType="BIGINT"/>
+            <result property="articleId" column="article_id" jdbcType="BIGINT"/>
+            <result property="userId" column="user_id" jdbcType="BIGINT"/>
+            <result property="createTime" column="create_time" jdbcType="TIMESTAMP"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id,article_id,user_id,
+        create_time
+    </sql>
+</mapper>

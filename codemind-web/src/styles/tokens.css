@@ -1,0 +1,230 @@
+/**
+ * CodeMind 设计 Token
+ * ------------------------------------------------------------------
+ * 设计定位：内容优先的技术社区 + 个人知识库 + AI 助手。
+ * 融合三种气质：
+ *   - 掘金式的浅色大留白、强阅读体验
+ *   - GitHub 式的细腻边框、等宽字体、克制的工科感
+ *   - 现代 AI 产品的柔和层次（AI 页面单独强化）
+ *
+ * 原则：
+ *   1. 中性灰阶承担 95% 的视觉重量，强调色只用于交互与状态
+ *   2. 不滥用阴影，优先用 1px 边框和背景层次区分区块
+ *   3. 圆角克制（4/6/8/12），不做大量胶囊
+ */
+
+:root {
+  /* ============ 中性色阶（文字 / 边框 / 背景的唯一来源） ============ */
+  --cm-gray-0: #ffffff;
+  --cm-gray-25: #fcfcfd;
+  --cm-gray-50: #f9fafb;
+  --cm-gray-100: #f2f4f7;
+  --cm-gray-200: #e9ecf1;
+  --cm-gray-300: #d8dde5;
+  --cm-gray-400: #b3bac6;
+  --cm-gray-500: #8b93a1;
+  --cm-gray-600: #6b7280;
+  --cm-gray-700: #4b5361;
+  --cm-gray-800: #313846;
+  --cm-gray-900: #1f2531;
+  --cm-gray-950: #141922;
+
+  /* ============ 语义化背景 ============ */
+  --cm-bg-body: #f9fafb;
+  --cm-bg-surface: #ffffff;
+  --cm-bg-subtle: #f2f4f7;
+  --cm-bg-sunken: #eef1f5;
+  --cm-bg-hover: rgba(31, 37, 49, 0.04);
+  --cm-bg-active: rgba(31, 37, 49, 0.07);
+
+  /* ============ 语义化文字 ============ */
+  --cm-text-primary: #1f2531;
+  --cm-text-secondary: #4b5361;
+  --cm-text-tertiary: #6b7280;
+  --cm-text-quaternary: #8b93a1;
+  --cm-text-inverse: #ffffff;
+  --cm-text-link: var(--cm-accent-600);
+
+  /* ============ 语义化边框 ============ */
+  --cm-border-subtle: #e9ecf1;
+  --cm-border-default: #d8dde5;
+  --cm-border-strong: #b3bac6;
+
+  /* ============ 强调色：克制的靛蓝（非 AI 紫，非默认蓝） ============ */
+  --cm-accent-50: #f0f4fe;
+  --cm-accent-100: #dde6fd;
+  --cm-accent-200: #c2d2fb;
+  --cm-accent-300: #9bb4f7;
+  --cm-accent-400: #6d8ef0;
+  --cm-accent-500: #4a6ce5;
+  --cm-accent-600: #3a55d4;
+  --cm-accent-700: #2f43b0;
+  --cm-accent-800: #2a3a8c;
+  --cm-accent-900: #27356f;
+
+  /* ============ 功能色（低饱和，避免塑料感） ============ */
+  --cm-success: #3f8f5f;
+  --cm-success-bg: #eef7f1;
+  --cm-success-border: #cfe7d9;
+
+  --cm-warning: #b57d1f;
+  --cm-warning-bg: #fdf6e7;
+  --cm-warning-border: #f0e0bc;
+
+  --cm-danger: #c0453f;
+  --cm-danger-bg: #fdf0ef;
+  --cm-danger-border: #f2d4d2;
+
+  --cm-info: #4a6ce5;
+  --cm-info-bg: #f0f4fe;
+
+  /* ============ 代码块（Markdown 展示态 / 编辑器预览共用） ============
+   * 刻意用深色块：技术文章里代码是「被引用的外部世界」，
+   * 浅色块会和正文糊在一起。语法配色围绕靛蓝强调色配，
+   * 避免出现与品牌无关的紫色（那会让 AI 页面显得像另一个产品）。
+   */
+  --cm-code-bg: #1b2029;
+  --cm-code-border: #262c37;
+  --cm-code-text: #dfe3ea;
+  /* 行内代码在浅色正文里用低饱和绛红，与靛蓝链接区分开 */
+  --cm-code-inline-text: #b03a5b;
+  --cm-code-scrollbar: rgba(255, 255, 255, 0.18);
+  --cm-code-scrollbar-hover: rgba(255, 255, 255, 0.3);
+
+  /* 语法着色（highlight.js 的 .hljs-* 角色） */
+  --cm-code-comment: #7c8698;
+  --cm-code-keyword: #9bb4f7;
+  --cm-code-string: #8fce9b;
+  --cm-code-number: #e0a878;
+  --cm-code-function: #7fd1c1;
+  --cm-code-meta: #7c8698;
+
+  /* ============ 半透明层（吸顶栏 / 遮罩） ============ */
+  --cm-bg-glass: rgba(255, 255, 255, 0.86);
+  --cm-bg-overlay: rgba(20, 25, 34, 0.32);
+
+  /* ============ 响应式断点尺度（桌面优先，兼顾平板） ============
+   * ⚠️ CSS 变量不能出现在 `@media` 条件里，所以这里只是**文档**，
+   *    写媒体查询时照抄下面的数值，不要再自创宽度。
+   *    tablet-lg 1024  平板横向 / 小笔记本：双栏塌成单栏
+   *    tablet    860  平板纵向：侧栏收起、工具条换行
+   *    mobile-lg 640  大屏手机：卡片内边距收紧、字号降一档
+   *    mobile    480  小屏手机：只保留最必要的信息
+   */
+
+  /* ============ 圆角 ============ */
+  --cm-radius-xs: 3px;
+  --cm-radius-sm: 4px;
+  --cm-radius-md: 6px;
+  --cm-radius-lg: 8px;
+  --cm-radius-xl: 12px;
+  --cm-radius-2xl: 16px;
+  --cm-radius-full: 999px;
+
+  /* ============ 阴影（极克制，用于浮层而非卡片） ============ */
+  --cm-shadow-xs: 0 1px 2px rgba(20, 25, 34, 0.04);
+  --cm-shadow-sm: 0 1px 3px rgba(20, 25, 34, 0.06), 0 1px 2px rgba(20, 25, 34, 0.04);
+  --cm-shadow-md: 0 4px 12px rgba(20, 25, 34, 0.07), 0 1px 3px rgba(20, 25, 34, 0.04);
+  --cm-shadow-lg: 0 12px 32px rgba(20, 25, 34, 0.1), 0 2px 8px rgba(20, 25, 34, 0.05);
+
+  /* ============ 字体 ============ */
+  --cm-font-sans:
+    'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB',
+    'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  --cm-font-mono:
+    'JetBrains Mono', 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
+
+  --cm-font-size-xs: 12px;
+  --cm-font-size-sm: 13px;
+  --cm-font-size-base: 14px;
+  --cm-font-size-md: 15px;
+  --cm-font-size-lg: 17px;
+  --cm-font-size-xl: 20px;
+  --cm-font-size-2xl: 24px;
+  --cm-font-size-3xl: 30px;
+
+  --cm-line-height-tight: 1.3;
+  --cm-line-height-normal: 1.6;
+  --cm-line-height-relaxed: 1.8;
+
+  /* ============ 间距（4px 基准） ============ */
+  --cm-space-1: 4px;
+  --cm-space-2: 8px;
+  --cm-space-3: 12px;
+  --cm-space-4: 16px;
+  --cm-space-5: 20px;
+  --cm-space-6: 24px;
+  --cm-space-8: 32px;
+  --cm-space-10: 40px;
+  --cm-space-12: 48px;
+  --cm-space-16: 64px;
+
+  /* ============ 布局尺寸 ============ */
+  --cm-container-width: 1200px;
+  --cm-container-narrow: 820px;
+  --cm-header-height: 56px;
+  --cm-sidebar-width: 240px;
+
+  /* ============ 层级 ============ */
+  --cm-z-header: 100;
+  --cm-z-drawer: 200;
+  --cm-z-modal: 300;
+  --cm-z-toast: 400;
+
+  /* ============ 过渡 ============ */
+  --cm-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --cm-ease-in: cubic-bezier(0.7, 0, 0.84, 0);
+  --cm-ease-elastic: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --cm-duration-fast: 120ms;
+  --cm-duration-base: 200ms;
+  --cm-duration-slow: 320ms;
+
+  /* ============ Element Plus 变量映射 ============ */
+  --el-color-primary: var(--cm-accent-600);
+  --el-color-primary-light-3: var(--cm-accent-400);
+  --el-color-primary-light-5: var(--cm-accent-300);
+  --el-color-primary-light-7: var(--cm-accent-200);
+  --el-color-primary-light-8: var(--cm-accent-100);
+  --el-color-primary-light-9: var(--cm-accent-50);
+  --el-color-primary-dark-2: var(--cm-accent-700);
+
+  --el-color-success: var(--cm-success);
+  --el-color-warning: var(--cm-warning);
+  --el-color-danger: var(--cm-danger);
+  --el-color-error: var(--cm-danger);
+  --el-color-info: var(--cm-text-tertiary);
+
+  --el-text-color-primary: var(--cm-text-primary);
+  --el-text-color-regular: var(--cm-text-secondary);
+  --el-text-color-secondary: var(--cm-text-tertiary);
+  --el-text-color-placeholder: var(--cm-text-quaternary);
+  --el-text-color-disabled: var(--cm-gray-400);
+
+  --el-border-color: var(--cm-border-default);
+  --el-border-color-light: var(--cm-border-subtle);
+  --el-border-color-lighter: var(--cm-border-subtle);
+  --el-border-color-extra-light: var(--cm-gray-100);
+  --el-border-color-hover: var(--cm-border-strong);
+
+  --el-fill-color: var(--cm-bg-subtle);
+  --el-fill-color-light: var(--cm-gray-50);
+  --el-fill-color-lighter: var(--cm-gray-25);
+  --el-fill-color-blank: var(--cm-bg-surface);
+
+  --el-bg-color: var(--cm-bg-surface);
+  --el-bg-color-page: var(--cm-bg-body);
+  --el-bg-color-overlay: var(--cm-bg-surface);
+
+  --el-border-radius-base: var(--cm-radius-md);
+  --el-border-radius-small: var(--cm-radius-sm);
+  --el-border-radius-round: var(--cm-radius-full);
+
+  --el-font-family: var(--cm-font-sans);
+  --el-font-size-base: var(--cm-font-size-base);
+
+  --el-box-shadow-light: var(--cm-shadow-sm);
+  --el-box-shadow: var(--cm-shadow-md);
+  --el-box-shadow-dark: var(--cm-shadow-lg);
+
+  --el-transition-duration: var(--cm-duration-base);
+}

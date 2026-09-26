@@ -1,0 +1,211 @@
+/**
+ * 全局基础样式：重置 + 排版 + 通用原子类
+ * 依赖 tokens.css 中的 CSS 变量。
+ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  font-family: var(--cm-font-sans);
+  font-size: var(--cm-font-size-base);
+  line-height: var(--cm-line-height-normal);
+  color: var(--cm-text-primary);
+  background-color: var(--cm-bg-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  margin: 0;
+  font-weight: 600;
+  line-height: var(--cm-line-height-tight);
+  letter-spacing: -0.01em;
+  color: var(--cm-text-primary);
+}
+
+p {
+  margin: 0;
+}
+
+a {
+  color: var(--cm-text-link);
+  text-decoration: none;
+  transition: color var(--cm-duration-fast) var(--cm-ease-out);
+}
+
+a:hover {
+  color: var(--cm-accent-700);
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}
+
+button {
+  font-family: inherit;
+}
+
+code,
+pre,
+kbd,
+samp {
+  font-family: var(--cm-font-mono);
+}
+
+/* 可见的键盘焦点环：用 outline 而非 box-shadow，保证在任何背景上都可见 */
+:focus-visible {
+  outline: 2px solid var(--cm-accent-500);
+  outline-offset: 2px;
+}
+
+/* ============ 滚动条：细、低调，不抢内容 ============ */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: var(--cm-gray-300);
+  border-radius: var(--cm-radius-full);
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--cm-gray-400);
+  background-clip: content-box;
+}
+
+/* ============ 通用滚动容器（细滚动条） ============ */
+.cm-scroll-thin::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.cm-scroll-thin::-webkit-scrollbar-thumb {
+  border: 1px solid transparent;
+  background-clip: content-box;
+}
+
+/* ============ 布局容器 ============ */
+.cm-container {
+  width: 100%;
+  max-width: var(--cm-container-width);
+  margin: 0 auto;
+  padding: 0 var(--cm-space-6);
+}
+
+.cm-container-narrow {
+  width: 100%;
+  max-width: var(--cm-container-narrow);
+  margin: 0 auto;
+  padding: 0 var(--cm-space-6);
+}
+
+/* ============ 文本工具类 ============ */
+.cm-text-secondary {
+  color: var(--cm-text-secondary);
+}
+
+.cm-text-tertiary {
+  color: var(--cm-text-tertiary);
+}
+
+.cm-text-quaternary {
+  color: var(--cm-text-quaternary);
+}
+
+.cm-text-mono {
+  font-family: var(--cm-font-mono);
+}
+
+/* 单行 / 多行截断 */
+.cm-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cm-line-clamp-1,
+.cm-line-clamp-2,
+.cm-line-clamp-3 {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.cm-line-clamp-1 {
+  -webkit-line-clamp: 1;
+  line-clamp: 1;
+}
+
+.cm-line-clamp-2 {
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+.cm-line-clamp-3 {
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+}
+
+/* ============ 分隔与层次 ============ */
+.cm-divider {
+  height: 1px;
+  background-color: var(--cm-border-subtle);
+  border: 0;
+  margin: 0;
+}
+
+/* 内容面板：用边框而非重阴影，保持工科质感 */
+.cm-panel {
+  background-color: var(--cm-bg-surface);
+  border: 1px solid var(--cm-border-subtle);
+  border-radius: var(--cm-radius-lg);
+}
+
+/* ============ 无障碍 ============ */
+.cm-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ============ 尊重用户的动效偏好 ============ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

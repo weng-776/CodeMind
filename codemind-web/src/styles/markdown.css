@@ -1,0 +1,335 @@
+/**
+ * Markdown 阅读样式
+ * ------------------------------------------------------------------
+ * 文章详情、笔记详情、AI 回复共用同一套排版规则。
+ * 目标是「技术文章阅读体验优先」：合适的行宽、清晰的层级、舒服的代码块。
+ */
+
+.cm-markdown {
+  font-size: var(--cm-font-size-md);
+  line-height: var(--cm-line-height-relaxed);
+  color: var(--cm-text-primary);
+  word-wrap: break-word;
+  /* 控制行宽，避免长行阅读疲劳 */
+  max-width: 72ch;
+}
+
+/* ============ 标题 ============ */
+.cm-markdown h1,
+.cm-markdown h2,
+.cm-markdown h3,
+.cm-markdown h4,
+.cm-markdown h5,
+.cm-markdown h6 {
+  margin: 1.8em 0 0.7em;
+  font-weight: 600;
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+}
+
+.cm-markdown > :first-child {
+  margin-top: 0;
+}
+
+.cm-markdown h1 {
+  font-size: 1.75em;
+  padding-bottom: 0.35em;
+  border-bottom: 1px solid var(--cm-border-subtle);
+}
+
+.cm-markdown h2 {
+  font-size: 1.4em;
+  padding-bottom: 0.3em;
+  border-bottom: 1px solid var(--cm-border-subtle);
+}
+
+.cm-markdown h3 {
+  font-size: 1.2em;
+}
+
+.cm-markdown h4 {
+  font-size: 1.05em;
+}
+
+.cm-markdown h5,
+.cm-markdown h6 {
+  font-size: 1em;
+  color: var(--cm-text-secondary);
+}
+
+/* ============ 段落与文本 ============ */
+.cm-markdown p {
+  margin: 0 0 1.1em;
+}
+
+.cm-markdown strong {
+  font-weight: 600;
+  color: var(--cm-text-primary);
+}
+
+.cm-markdown em {
+  font-style: italic;
+}
+
+.cm-markdown del {
+  color: var(--cm-text-quaternary);
+}
+
+.cm-markdown a {
+  color: var(--cm-text-link);
+  text-decoration: underline;
+  text-decoration-color: var(--cm-accent-200);
+  text-underline-offset: 3px;
+  transition: text-decoration-color var(--cm-duration-fast) var(--cm-ease-out);
+}
+
+.cm-markdown a:hover {
+  text-decoration-color: var(--cm-accent-500);
+}
+
+/* ============ 列表 ============ */
+.cm-markdown ul,
+.cm-markdown ol {
+  margin: 0 0 1.1em;
+  padding-left: 1.6em;
+}
+
+.cm-markdown li {
+  margin: 0.35em 0;
+}
+
+.cm-markdown li > ul,
+.cm-markdown li > ol {
+  margin: 0.35em 0 0.35em;
+}
+
+.cm-markdown ul {
+  list-style-type: disc;
+}
+
+.cm-markdown ul ul {
+  list-style-type: circle;
+}
+
+.cm-markdown ol {
+  list-style-type: decimal;
+}
+
+/* ============ 引用 ============ */
+.cm-markdown blockquote {
+  margin: 0 0 1.1em;
+  padding: 0.2em 0 0.2em 1.1em;
+  border-left: 3px solid var(--cm-border-default);
+  color: var(--cm-text-secondary);
+}
+
+.cm-markdown blockquote > :last-child {
+  margin-bottom: 0;
+}
+
+/* ============ 行内代码 ============ */
+.cm-markdown :not(pre) > code {
+  padding: 0.15em 0.4em;
+  font-size: 0.875em;
+  background-color: var(--cm-bg-subtle);
+  border: 1px solid var(--cm-border-subtle);
+  border-radius: var(--cm-radius-sm);
+  color: var(--cm-code-inline-text);
+  white-space: break-spaces;
+}
+
+/* ============ 代码块 ============ */
+.cm-markdown pre {
+  margin: 0 0 1.2em;
+  padding: var(--cm-space-4) var(--cm-space-5);
+  overflow-x: auto;
+  background-color: var(--cm-code-bg);
+  border-radius: var(--cm-radius-lg);
+  border: 1px solid var(--cm-code-border);
+  font-size: var(--cm-font-size-sm);
+  line-height: 1.65;
+  tab-size: 2;
+}
+
+.cm-markdown pre code {
+  padding: 0;
+  background: none;
+  border: none;
+  color: var(--cm-code-text);
+  font-size: inherit;
+  white-space: pre;
+}
+
+/* 代码块滚动条在深色背景上要浅一些 */
+.cm-markdown pre::-webkit-scrollbar {
+  height: 8px;
+}
+
+.cm-markdown pre::-webkit-scrollbar-thumb {
+  background-color: var(--cm-code-scrollbar);
+  border-radius: var(--cm-radius-full);
+}
+
+.cm-markdown pre::-webkit-scrollbar-thumb:hover {
+  background-color: var(--cm-code-scrollbar-hover);
+}
+
+/* ============ 语法着色（highlight.js 角色 → token） ============
+ * utils/markdown.ts 里已经跑了 hljs，产出的 span 带 .hljs-* 类。
+ * 但全项目此前**没有任何 .hljs-* 样式**，等于高亮算完就丢掉、
+ * 代码块永远是单色。这一节把它补上，并且只引用 token，不写死色值。
+ */
+.cm-markdown .hljs-comment,
+.cm-markdown .hljs-quote {
+  color: var(--cm-code-comment);
+  font-style: italic;
+}
+
+.cm-markdown .hljs-keyword,
+.cm-markdown .hljs-selector-tag,
+.cm-markdown .hljs-type,
+.cm-markdown .hljs-built_in,
+.cm-markdown .hljs-literal,
+.cm-markdown .hljs-name,
+.cm-markdown .hljs-tag {
+  color: var(--cm-code-keyword);
+}
+
+.cm-markdown .hljs-string,
+.cm-markdown .hljs-regexp,
+.cm-markdown .hljs-attr,
+.cm-markdown .hljs-attribute,
+.cm-markdown .hljs-symbol,
+.cm-markdown .hljs-bullet,
+.cm-markdown .hljs-addition {
+  color: var(--cm-code-string);
+}
+
+.cm-markdown .hljs-number,
+.cm-markdown .hljs-variable,
+.cm-markdown .hljs-template-variable,
+.cm-markdown .hljs-params {
+  color: var(--cm-code-number);
+}
+
+.cm-markdown .hljs-title,
+.cm-markdown .hljs-title.function_,
+.cm-markdown .hljs-title.class_,
+.cm-markdown .hljs-section,
+.cm-markdown .hljs-selector-id,
+.cm-markdown .hljs-selector-class {
+  color: var(--cm-code-function);
+}
+
+.cm-markdown .hljs-meta,
+.cm-markdown .hljs-doctag,
+.cm-markdown .hljs-deletion {
+  color: var(--cm-code-meta);
+}
+
+/* 强调与删除线（hljs 在 diff / 文档类语言里会产出） */
+.cm-markdown .hljs-emphasis {
+  font-style: italic;
+}
+
+.cm-markdown .hljs-strong {
+  font-weight: 600;
+}
+
+/* 未识别语言的整块兜底：不要再套一层背景，否则和 pre 打架 */
+.cm-markdown .hljs {
+  background: none;
+  padding: 0;
+}
+
+/* ============ 表格 ============ */
+.cm-markdown table {
+  display: block;
+  width: 100%;
+  margin: 0 0 1.2em;
+  overflow-x: auto;
+  border-collapse: collapse;
+  font-size: var(--cm-font-size-base);
+}
+
+.cm-markdown th,
+.cm-markdown td {
+  padding: var(--cm-space-2) var(--cm-space-3);
+  border: 1px solid var(--cm-border-default);
+  text-align: left;
+}
+
+.cm-markdown th {
+  background-color: var(--cm-bg-subtle);
+  font-weight: 600;
+}
+
+.cm-markdown tbody tr:nth-child(even) {
+  background-color: var(--cm-gray-25);
+}
+
+/* ============ 图片 ============ */
+.cm-markdown img {
+  max-width: 100%;
+  margin: 1.2em 0;
+  border-radius: var(--cm-radius-lg);
+  border: 1px solid var(--cm-border-subtle);
+}
+
+/* ============ 分隔线 ============ */
+.cm-markdown hr {
+  height: 1px;
+  margin: 2em 0;
+  background-color: var(--cm-border-subtle);
+  border: 0;
+}
+
+/* ============ 任务列表 ============ */
+.cm-markdown input[type='checkbox'] {
+  margin-right: 0.4em;
+}
+
+/* ============ 紧凑模式：用于 AI 回复气泡 ============ */
+.cm-markdown--compact {
+  font-size: var(--cm-font-size-base);
+  line-height: var(--cm-line-height-normal);
+  max-width: none;
+}
+
+.cm-markdown--compact h1 {
+  font-size: 1.35em;
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.cm-markdown--compact h2 {
+  font-size: 1.2em;
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.cm-markdown--compact h3 {
+  font-size: 1.08em;
+}
+
+.cm-markdown--compact h1,
+.cm-markdown--compact h2,
+.cm-markdown--compact h3,
+.cm-markdown--compact h4 {
+  margin: 1.2em 0 0.5em;
+}
+
+.cm-markdown--compact pre {
+  margin: 0 0 0.9em;
+  padding: var(--cm-space-3) var(--cm-space-4);
+  border-radius: var(--cm-radius-md);
+}
+
+.cm-markdown--compact p {
+  margin: 0 0 0.8em;
+}
+
+.cm-markdown--compact ul,
+.cm-markdown--compact ol {
+  margin: 0 0 0.8em;
+}

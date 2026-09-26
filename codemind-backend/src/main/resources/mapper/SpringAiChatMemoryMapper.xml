@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.codemind.ai.mapper.SpringAiChatMemoryMapper">
+
+    <!-- 通用查询映射结果：把数据库下划线字段 映射成 实体类驼峰属性 -->
+    <resultMap id="BaseResultMap" type="com.codemind.ai.entity.SpringAiChatMemory">
+        <id column="id" property="id" />
+        <result column="conversation_id" property="conversationId" />
+        <result column="content" property="content" />
+        <result column="type" property="type" />
+        <result column="timestamp" property="timestamp" />
+    </resultMap>
+
+    <!-- 通用查询结果列：写 SQL 时直接引用，不用每次写一大堆字段名 -->
+    <sql id="Base_Column_List">
+        id, conversation_id, content, type, timestamp
+    </sql>
+
+    <!--
+      注意：基础的增删改查（insert, delete, update, select）
+      全都在 MyBatis-Plus 的 BaseMapper 内置实现了，
+      这个 XML 目前只需要存在即可，不需要写任何基础 SQL。
+      只有当你后面要写复杂的连表查询时，才在这里加 <select> 标签。
+    -->
+
+</mapper>

@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.codemind.knowledge.mapper.NoteMapper">
+
+    <resultMap id="BaseResultMap" type="com.codemind.knowledge.entity.Note">
+            <id property="id" column="id" jdbcType="BIGINT"/>
+            <result property="userId" column="user_id" jdbcType="BIGINT"/>
+            <result property="categoryId" column="category_id" jdbcType="BIGINT"/>
+            <result property="title" column="title" jdbcType="VARCHAR"/>
+            <result property="content" column="content" jdbcType="VARCHAR"/>
+            <result property="summary" column="summary" jdbcType="VARCHAR"/>
+            <result property="cover" column="cover" jdbcType="VARCHAR"/>
+            <result property="visibility" column="visibility" jdbcType="TINYINT"/>
+            <result property="status" column="status" jdbcType="TINYINT"/>
+            <result property="wordCount" column="word_count" jdbcType="INTEGER"/>
+            <result property="viewCount" column="view_count" jdbcType="BIGINT"/>
+            <result property="createTime" column="create_time" jdbcType="TIMESTAMP"/>
+            <result property="updateTime" column="update_time" jdbcType="TIMESTAMP"/>
+            <result property="isDelete" column="is_delete" jdbcType="TINYINT"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id,user_id,category_id,
+        title,content,summary,
+        cover,visibility,status,
+        word_count,view_count,create_time,
+        update_time,is_delete
+    </sql>
+    <select id="queryNoteList" resultType="com.codemind.ai.vo.SearchNoteData">
+        SELECT
+        ne.id,
+        ne.title,
+        u.user_name as author,
+        ne.summary,
+        c.name AS category_name,
+        ne.word_count,
+        ne.create_time,
+        -- 子查询：聚合标签
+        (SELECT GROUP_CONCAT(t.name SEPARATOR ', ')
+        FROM note_tag nt
+        LEFT JOIN tag t ON nt.tag_id = t.id
+        WHERE nt.note_id = ne.id) AS tags
+        FROM note ne
+        LEFT JOIN user u ON ne.user_id = u.id
+        LEFT JOIN category c ON ne.category_id = c.id
+        <where>
+            ne.is_delete = 0
+            AND ne.visibility = 1
+            AND ne.status = 1
+            <if test="author != null and author != ''">
+                and u.user_name like CONCAT('%',#{author},'%')
+            </if>
+            <if test="categoryName != null and categoryName != ''">
+                and c.name like CONCAT('%',#{categoryName},'%')
+            </if>
+            <if test="keyWord != null and keyWord != ''">
+                and (ne.title like CONCAT('%', #{keyWord}, '%')
+                or ne.summary like CONCAT('%', #{keyWord}, '%'))
+            </if>
+        </where>
+        <!-- ③ 标签过滤挪到 HAVING（因为 tags 是别名） -->
+        <if test="tagName != null and tagName != ''">
+            HAVING tags like CONCAT('%',#{tagName},'%')
+        </if>
+        <choose>
+            <when test="sort == 'latest'">
+                ORDER BY ne.create_time DESC
+            </when>
+            <when test="sort == 'hot'">
+                ORDER BY ne.view_count DESC
+            </when>
+            <otherwise>
+                ORDER BY ne.create_time DESC
+            </otherwise>
+        </choose>
+        limit #{limit}
+    </select>
+    <select id="myQueryNoteList" resultType="com.codemind.ai.vo.SearchNoteData">
+        SELECT
+        ne.id,
+        ne.title,
+        u.user_name as author,
+        ne.summary,
+        c.name AS category_name,
+        ne.word_count,
+        ne.create_time,
+        -- 子查询：聚合标签
+        (SELECT GROUP_CONCAT(t.name SEPARATOR ', ')
+        FROM note_tag nt
+        LEFT JOIN tag t ON nt.tag_id = t.id
+        WHERE nt.note_id = ne.id) AS tags
+        FROM note ne
+        LEFT JOIN user u ON ne.user_id = u.id
+        LEFT JOIN category c ON ne.category_id = c.id
+        <where>
+            ne.is_delete = 0
+            AND u.id = #{UserId}
+            <if test="author != null and author != ''">
+                and u.user_name like CONCAT('%',#{author},'%')
+            </if>
+            <if test="categoryName != null and categoryName != ''">
+                and c.name like CONCAT('%',#{categoryName},'%')
+            </if>
+            <if test="keyWord != null and keyWord != ''">
+                and (ne.title like CONCAT('%', #{keyWord}, '%')
+                or ne.summary like CONCAT('%', #{keyWord}, '%'))
+            </if>
+        </where>
+        <!-- ③ 标签过滤挪到 HAVING（因为 tags 是别名） -->
+        <if test="tagName != null and tagName != ''">
+            HAVING tags like CONCAT('%',#{tagName},'%')
+        </if>
+        ORDER BY ne.create_time DESC
+        limit #{limit}
+    </select>
+    <select id="linkNote" resultType="com.codemind.ai.vo.SearchNoteData">
+        SELECT
+        ne.id,
+        ne.title,
+        u.user_name as author,
+        ne.summary,
+        c.name AS category_name,
+        ne.word_count,
+        ne.create_time,
+        -- 子查询：聚合标签
+        (SELECT GROUP_CONCAT(t.name SEPARATOR ', ')
+        FROM note_tag nt
+        LEFT JOIN tag t ON nt.tag_id = t.id
+        WHERE nt.note_id = ne.id) AS tags
+        FROM note ne
+        LEFT JOIN user u ON ne.user_id = u.id
+        LEFT JOIN category c ON ne.category_id = c.id
+        <where>
+            ne.is_delete = 0
+            AND ne.visibility = 1
+            AND ne.status = 1
+            <if test="listName != null and listName.size() > 0">
+                AND (
+                <foreach collection="listName"
+                         item="keyword"
+                         separator=" OR ">
+                    ne.title LIKE CONCAT('%', #{keyword}, '%')
+                    OR ne.summary LIKE CONCAT('%', #{keyword}, '%')
+                </foreach>
+                )
+            </if>
+        </where>
+        limit #{limit}
+    </select>
+</mapper>

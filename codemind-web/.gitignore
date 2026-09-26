@@ -1,0 +1,53 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+.DS_Store
+dist
+dist-ssr
+coverage
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+*.tsbuildinfo
+
+.eslintcache
+
+# Cypress
+/cypress/videos/
+/cypress/screenshots/
+
+# Vitest
+__screenshots__/
+
+# Vite
+*.timestamp-*-*.mjs
+
+### ── 本项目追加（2026-09-26）─────────────────────────────
+
+# 验证脚本产出的截图（由 npm run shot:* 生成）
+docs/screenshots/
+
+# AI 工具产生的本地数据
+.workbuddy/
+.workbuddy-ai/
+.mimocode/
+
+# 本地环境变量覆盖（.env 本身要提交，它只有 /api 与代理地址，不含密钥）
+.env.local
+.env.*.local

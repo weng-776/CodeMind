@@ -1,0 +1,143 @@
+# ============================================================================
+# CodeMind 统一 .gitignore（前后端共用一个仓库）
+# ----------------------------------------------------------------------------
+# 合并自 codemind-backend/.gitignore 与 codemind-web/.gitignore（2026-09-26）
+#
+# 说明：
+#   · 放在仓库根目录，**不带路径前缀的规则会在任意层级生效**
+#     （如 `node_modules/` 同时命中 codemind-web/node_modules/ 与任何子目录）
+#   · 下面每段都标了来源，方便回查
+#   · ⚠️ 唯一需要特别处理的是 .env —— 前后端策略不同，见「六、环境变量」段
+# ============================================================================
+
+### ── 一、Java / Maven / Gradle（后端 codemind-backend）────────────────────
+
+target/
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+.kotlin
+
+# Gradle / 其它构建（来源：后端 NetBeans 段）
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+### ── 二、Node / 前端（codemind-web）───────────────────────────────────────
+
+node_modules/
+dist/
+dist-ssr/
+coverage/
+*.local
+
+# 各类包管理器日志
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Vite / TS 中间产物
+*.tsbuildinfo
+.eslintcache
+*.timestamp-*-*.mjs
+
+### ── 三、编辑器 ──────────────────────────────────────────────────────────
+
+# IntelliJ IDEA（用**精确名单**而不是整目录忽略：
+# 后端 .idea 下有几个无害且值得提交的配置，如 codeStyles / encodings）
+.idea/modules.xml
+.idea/jarRepositories.xml
+.idea/compiler.xml
+.idea/libraries/
+*.iws
+*.iml
+*.ipr
+
+# 本机私有、绝对不能传
+.idea/workspace.xml
+.idea/shelf/
+.idea/dataSources.xml
+.idea/dataSources.local.xml
+.idea/dataSources/
+.idea/httpRequests/
+
+# Eclipse
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+# NetBeans
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+
+# VS Code（保留 extensions.json —— 团队共享的推荐扩展）
+.vscode/*
+!.vscode/extensions.json
+
+# 其它
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+### ── 四、操作系统 ────────────────────────────────────────────────────────
+
+.DS_Store
+Thumbs.db
+
+### ── 五、测试产物 ────────────────────────────────────────────────────────
+
+/cypress/videos/
+/cypress/screenshots/
+__screenshots__/
+
+# 前端验证脚本产出的截图（npm run shot:*）
+docs/screenshots/
+
+### ── 六、环境变量（⚠️ 前后端策略不同，不要改成一行）──────────────────────
+
+# 默认全部忽略
+.env
+.env.local
+.env.*
+.env.*.local
+
+# 例外 1：示例文件永远要提交
+!.env.example
+!.env.*.example
+
+# 例外 2：前端的 .env **需要提交**
+#   它只有 VITE_API_BASE_URL=/api 与 VITE_PROXY_TARGET=开发代理地址，
+#   **不含任何密钥**，提交它别人 clone 下来才能直接跑。
+#   （后端 .env 不同 —— 那里放密钥，必须忽略）
+!codemind-web/.env
+
+### ── 七、AI 工具产生的本地数据（含明文凭据，绝对不能传）─────────────────
+
+.workbuddy/
+.workbuddy-ai/
+.mimocode/
+.claude/
+.cursor/
+
+### ── 八、运行日志 ────────────────────────────────────────────────────────
+
+# 后端 application.yml 配了 logging.file.name: logs/codemind.log，
+# 跑一次就重建；里面有完整请求与提示词，不能传
+logs/
+*.log
+
+### ── 九、后端本机专用配置覆盖 ────────────────────────────────────────────
+
+application-local.yml
+application-local.yaml

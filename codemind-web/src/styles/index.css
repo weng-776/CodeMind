@@ -1,0 +1,14 @@
+/* 样式统一入口
+ * ------------------------------------------------------------------
+ * 顺序至关重要，不要随意调整：
+ *   1. element-plus 基础样式 —— 必须先加载，否则组件退回浏览器默认外观
+ *      （漏掉它时按钮背景会变成 UA 的 buttonface 灰色，而不是主题色）
+ *   2. tokens.css —— 定义 --cm-* 变量，并映射 --el-* 变量
+ *   3. element-override.css —— 覆写 EP 的形态细节，必须晚于 EP 本体
+ *   4. base.css / markdown.css —— 项目自己的全局样式
+ */
+@import 'element-plus/dist/index.css';
+@import './tokens.css';
+@import './element-override.css';
+@import './base.css';
+@import './markdown.css';
