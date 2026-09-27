@@ -16,4 +16,20 @@ export const authRoutes: RouteRecordRaw[] = [
       redirectIfAuthed: true,
     },
   },
+  {
+    /*
+     * 注册后强制设置密码（1.13）。
+     * `skipPasswordGuard` 必须有：否则守卫看到 hasPassword === false 后
+     * 会把用户从本页再跳回本页，形成自跳自的死循环。
+     */
+    path: '/set-password',
+    name: RouteName.SET_PASSWORD,
+    component: () => import('@/views/auth/SetPasswordView.vue'),
+    meta: {
+      title: '设置密码',
+      layout: false,
+      requiresAuth: true,
+      skipPasswordGuard: true,
+    },
+  },
 ]

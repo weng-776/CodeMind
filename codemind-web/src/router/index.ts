@@ -77,6 +77,19 @@ router.beforeEach(async (to) => {
     await userStore.fetchUnreadCount()
   }
 
+  // 4) 注册后从未设置过密码 → 强制去 /set-password（后端 1.13 / 2026-09-27）
+  //    ⚠️ 只认 `=== false`：字段缺失时是 undefined，写成取反会把所有老用户都拦进来。
+  //    ⚠️ skipPasswordGuard：设置页自己必须跳过，否则会「自己跳自己」形成死循环。
+  //    ⚠️ 登录页不拦：登录成功前不该被弹走（登录成功后由 LoginView 主动跳）。
+  if (
+    userStore.isLoggedIn &&
+    userStore.userInfo?.hasPassword === false &&
+    !to.meta.skipPasswordGuard &&
+    to.name !== RouteName.LOGIN
+  ) {
+    return { name: RouteName.SET_PASSWORD, query: { redirect: to.fullPath } }
+  }
+
   return true
 })
 

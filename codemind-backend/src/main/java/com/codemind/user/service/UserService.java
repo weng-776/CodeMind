@@ -1,10 +1,7 @@
 package com.codemind.user.service;
 
 import com.codemind.common.Result;
-import com.codemind.user.dto.UpdatePasswordDTO;
-import com.codemind.user.dto.UpdateUserDataDTO;
-import com.codemind.user.dto.UserLoginCodeDTO;
-import com.codemind.user.dto.UserPasswordLoginDTO;
+import com.codemind.user.dto.*;
 import com.codemind.user.entity.User;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.codemind.user.vo.CheckUserHomeVO;
@@ -37,4 +34,6 @@ public interface UserService extends IService<User> {
     Result<Boolean> updatePassword(UpdatePasswordDTO userPassword);
     //查看他人主页
     Result<CheckUserHomeVO> checkUserHome(Long userId);
+    //设置密码 注册完以后调用此接口设置密码
+    Result<Void> setPassword(SetPasswordDTO setPasswordDTO);
 }

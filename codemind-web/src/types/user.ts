@@ -45,6 +45,16 @@ export interface UserInfoVO {
   noteCount: number
   /** 文章总数 */
   articleCount: number
+  /**
+   * 是否**已经设置过**登录密码（2026-09-27 后端新增字段）。
+   *
+   * - `false` = 手机验证码注册的新用户（库里 password 是空串）→ 必须先去 `/set-password` 设一个
+   * - `true`  = 已设过密码
+   *
+   * ⚠️ 判断「没设过密码」**必须写 `hasPassword === false`**，不能写 `!hasPassword`：
+   * 字段缺失时是 `undefined`，取反会把所有老用户都判成「没设过密码」并弹进设置页。
+   */
+  hasPassword: boolean
 }
 
 /** 他人主页信息（1.7 GET /api/user/profile/{userId}） */
@@ -105,4 +115,18 @@ export interface UpdateUserDataParams {
 export interface UpdatePasswordParams {
   oldPassword: string
   newPassword: string
+}
+
+/**
+ * 1.13 注册后首次设置密码（2026-09-27 后端新增 POST /api/user/setPassword）
+ *
+ * ⚠️ 只能用于「从没设过密码」的账号：
+ *   - 已设过密码的账号再调 → 400「密码已设置，请使用修改密码」
+ *   - 改密码走 1.6 `PUT /api/user/updatePassword`（要旧密码）
+ *   - `phone` 必须与当前登录用户一致，否则 400「手机号不匹配」
+ *   - 密码规则 `^\w{4,32}$`
+ */
+export interface SetPasswordParams {
+  password: string
+  phone: string
 }

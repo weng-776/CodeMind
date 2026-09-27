@@ -6,6 +6,7 @@
 export const RouteName = {
   /* 认证 */
   LOGIN: 'login',
+  SET_PASSWORD: 'set-password',
 
   /* 首页 */
   HOME: 'home',

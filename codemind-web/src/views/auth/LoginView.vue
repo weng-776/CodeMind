@@ -1,12 +1,18 @@
 <script setup lang="ts">
 /**
- * 登录页：双 Tab（验证码 / 密码），共用手机号输入。
+ * 登录页
+ * ------------------------------------------------------------------
+ * 双 Tab：验证码登录 / 密码登录。两者共用手机号输入。
  *
  * 设计取舍：
- *   1. 验证码登录是默认 Tab —— 它是「登录 / 注册」二合一，新用户不需要单独的注册流程。
- *   2. 登录后的跳转优先级：`query.redirect` > 首页（守卫注入的 redirect 已含完整 fullPath）。
- *   3. 「发送验证码」按钮单独判断手机号格式，不必等整个表单校验通过才能发码。
- *   4. 倒计时用 setInterval，组件卸载时必须清理，否则切走再回来会有多个计时器同时递减。
+ *   1. 验证码登录是默认 Tab —— 文档里它是「登录 / 注册」二合一，新用户
+ *      不需要单独的注册流程，降低首次使用门槛。
+ *   2. 登录成功后的跳转优先级：query.redirect > 首页。守卫注入的
+ *      redirect 已经带了完整 fullPath（含 query），直接 push 即可。
+ *   3. 表单校验用 Element Plus 的 rules，但「发送验证码」按钮的禁用
+ *      单独判断手机号格式 —— 否则用户要等整个表单校验通过才能发码。
+ *   4. 倒计时用 setInterval，组件卸载时必须清理，否则切走再回来
+ *      会出现多个计时器同时递减。
  */
 import { computed, onBeforeUnmount, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -167,6 +173,21 @@ async function handleSubmit() {
     // redirect 由守卫写入，形如 /articles/12?from=x，直接可用
     const redirect = route.query.redirect
     const target = typeof redirect === 'string' && redirect ? redirect : null
+
+    /*
+     * 注册后从未设过密码 → 先去设密码（后端 1.13）。
+     * 路由守卫也能兜住，但这里主动跳可以避免「先闪一下首页再被弹走」。
+     * ⚠️ 只认 `=== false`（字段缺失是 undefined，取反会误伤老用户）。
+     * 把原本想去的地址透传过去，设完密码后回到那里。
+     */
+    if (userStore.userInfo?.hasPassword === false) {
+      await router.replace({
+        name: RouteName.SET_PASSWORD,
+        query: target ? { redirect: target } : {},
+      })
+      return
+    }
+
     if (target) {
       await router.replace(target)
     } else {

@@ -19,7 +19,6 @@
     "test": "run-s test:decoding test:stream test:markdown test:layout test:render",
     "shot:home": "node scripts/capture-home.mjs",
     "test:login": "node scripts/verify-login.mjs",
-    "test:login:real": "node scripts/verify-real-login.mjs",
     "test:list": "node scripts/verify-article-list.mjs",
     "test:detail": "node scripts/verify-article-detail.mjs",
     "test:note": "node scripts/verify-note.mjs",

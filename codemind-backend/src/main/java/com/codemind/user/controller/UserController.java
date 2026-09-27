@@ -1,6 +1,7 @@
 package com.codemind.user.controller;
 
 import com.codemind.common.Result;
+import com.codemind.user.dto.SetPasswordDTO;
 import com.codemind.user.dto.UpdatePasswordDTO;
 import com.codemind.user.dto.UpdateUserDataDTO;
 import com.codemind.user.service.UserService;
@@ -40,4 +41,11 @@ public class UserController {
     public Result<CheckUserHomeVO> checkUserHome(@PathVariable Long userId){
         return userService.checkUserHome(userId);
     }
+
+    //设置密码 注册完以后调用此接口设置密码
+    @PostMapping("setPassword")
+    public Result<Void> setPassword(@Valid @RequestBody SetPasswordDTO setPasswordDTO){
+        return userService.setPassword(setPasswordDTO);
+    }
+
 }

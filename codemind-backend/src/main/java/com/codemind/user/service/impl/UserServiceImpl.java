@@ -14,10 +14,7 @@ import com.codemind.context.UserContext;
 import com.codemind.exceptionhandler.BusinessException;
 import com.codemind.knowledge.entity.Note;
 import com.codemind.knowledge.mapper.NoteMapper;
-import com.codemind.user.dto.UpdatePasswordDTO;
-import com.codemind.user.dto.UpdateUserDataDTO;
-import com.codemind.user.dto.UserLoginCodeDTO;
-import com.codemind.user.dto.UserPasswordLoginDTO;
+import com.codemind.user.dto.*;
 import com.codemind.user.entity.Follow;
 import com.codemind.user.entity.User;
 import com.codemind.user.mapper.FollowMapper;
@@ -272,6 +269,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         userDataVO.setFansCount(fansCount.intValue());
         userDataVO.setNoteCount(noteCount.intValue());
         userDataVO.setArticleCount(articleCount.intValue());
+        //是否已设置过密码：注册时密码存为空字符串，据此判断新用户是否需要强制设置密码
+        userDataVO.setHasPassword(StringUtils.hasText(user.getPassword()));
         //返回 第一版先这样查数据库
         return Result.success(userDataVO);
     }
@@ -387,6 +386,30 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
 
         //返回
         return Result.success(checkUserHomeVO);
+    }
+
+    //手机号注册以后进入此接口设置密码
+    @Override
+    public Result<Void> setPassword(SetPasswordDTO setPasswordDTO) {
+        Long userId = UserContext.getUserId();
+        User user = getById(userId);
+        if (ObjectUtils.isEmpty(user)) {
+            throw BusinessException.notFound("未找到相关用户");
+        }
+        if (!user.getPhone().equals(setPasswordDTO.getPhone())) {
+            throw BusinessException.badRequest("手机号不匹配");
+        }
+        //该接口只用于注册后首次设置密码；已设置过的必须走 /user/updatePassword（校验旧密码）
+        //否则任何登录用户都能借此绕过旧密码直接重置密码
+        if (StringUtils.hasText(user.getPassword())) {
+            throw BusinessException.badRequest("密码已设置，请使用修改密码");
+        }
+        String password = encoder.encode(setPasswordDTO.getPassword());
+        //更新
+        update(new LambdaUpdateWrapper<User>().eq(User::getId, userId)
+                .eq(User::getPhone, setPasswordDTO.getPhone())
+                .set(User::getPassword, password));
+        return Result.success("操作成功");
     }
 
     private String randomUserName(String userName) {

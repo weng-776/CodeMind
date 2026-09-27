@@ -9,6 +9,7 @@ import type {
   LoginByPasswordParams,
   LoginResultVO,
   SendCodeParams,
+  SetPasswordParams,
   UpdatePasswordParams,
   UpdateUserDataParams,
   UserInfoVO,
@@ -70,6 +71,18 @@ export function updateUserData(data: UpdateUserDataParams) {
  */
 export function updatePassword(data: UpdatePasswordParams) {
   return http.put<boolean>('/user/updatePassword', data)
+}
+
+/**
+ * 1.13 注册后首次设置密码（需认证）
+ *
+ * 后端 2026-09-27 新增：手机验证码注册的账号库里 password 是空串，
+ * 必须先设置一个密码才能用密码登录。成功时 `data` 为 **null**，只判 `code === 200`。
+ * 已设过密码的账号再调会返回 400「密码已设置，请使用修改密码」——
+ * 「改密码」是另一条路：1.6 `updatePassword`。
+ */
+export function setPassword(data: SetPasswordParams) {
+  return http.post<null>('/user/setPassword', data)
 }
 
 /** 1.7 查看用户主页（认证可选，用于判断关注状态） */
