@@ -6,19 +6,13 @@ import com.codemind.community.dto.CacheMessage;
 import com.codemind.community.dto.CountMessage;
 import com.codemind.community.entity.Article;
 import com.codemind.community.service.ArticleService;
-import com.codemind.community.vo.ArticleDetailVO;
 import com.codemind.config.RabbitConfig;
-import com.rabbitmq.client.Channel;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
-import org.springframework.amqp.rabbit.core.RabbitTemplate;
-import org.springframework.amqp.support.AmqpHeaders;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.stereotype.Component;
 
-import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 @Slf4j
 @Component
@@ -29,8 +23,8 @@ public class CountConsumer {
     @Autowired
     private StringRedisTemplate redisTemplate;
 
-    @RabbitListener(queues = RabbitConfig.COUNT_QUEUE)
-    public void onMessage(CountMessage message , Channel channel, @Header(AmqpHeaders.DELIVERY_TAG) long tag) throws Exception {
+    @RabbitListener(queues = RabbitConfig.COUNT_QUEUE,containerFactory = "rabbitListenerContainerFactory")
+    public void onMessage(CountMessage message ) {
         String idemKey = "codemind:msg:count:" + message.getMessageId();
         //获取消息并存入redis 做幂等判断
         try {
@@ -46,21 +40,19 @@ public class CountConsumer {
                     throw new RuntimeException("计数失败");
                 }
             }
-            //手动返回ack
-            channel.basicAck(tag,false);
 
         } catch (Exception e) {
             //删除标记
             redisTemplate.delete(idemKey);
             log.error("计数消费失败，messageId={}",
                     message.getMessageId(), e);
-           channel.basicNack(tag,false,true);
+            throw e;
         }
     }
 
-
-    @RabbitListener(queues = RabbitConfig.VIEW_QUEUE)
-    public void ViewMessage(CountMessage message , Channel channel, @Header(AmqpHeaders.DELIVERY_TAG) long tag) throws Exception {
+    //浏览量计数
+    @RabbitListener(queues = RabbitConfig.VIEW_QUEUE,containerFactory = "rabbitListenerContainerFactory")
+    public void ViewMessage(CountMessage message) {
         //获取消息并存入redis 做幂等判断
         String idemKey = "codemind:msg:viewMsg:" + message.getMessageId();
         try {
@@ -77,40 +69,34 @@ public class CountConsumer {
                     throw new RuntimeException("计数失败");
                 }
             }
-            //手动返回ack
-            channel.basicAck(tag,false);
+
         } catch (Exception e) {
             redisTemplate.delete(idemKey);
             log.error("计数消费失败，messageId={}",
                     message.getMessageId(), e);
-            channel.basicNack(tag,false,true);
+            throw e;
         }
     }
-    @RabbitListener(queues = RabbitConfig.CACHE_QUEUE)
-    public void cacheMessages(CacheMessage message,Channel channel, @Header(AmqpHeaders.DELIVERY_TAG) long tag) throws Exception {
+    //删除文章缓存
+    @RabbitListener(queues = RabbitConfig.CACHE_QUEUE
+    ,containerFactory = "rabbitListenerContainerFactory")
+    public void cacheMessages(CacheMessage message) throws Exception {
         //删除缓存 有三次重试机制删除
-        //手动确认ack
         try {
             redisTemplate.delete(RedisKeyConstants.ARTICLE_DETAIL_KEY+message.getArticleId());
-            channel.basicAck(tag,false);
+
         } catch (Exception e) {
-            channel.basicNack(tag,false,true);
-            log.error("计数消费失败，messageId={}",
+            log.error("缓存删除消费失败，messageId={}",
                     message.getMessageId(), e);
             throw e;
         }
     }
 
     //发布文章初始到详情缓存 以及 热门文章缓存
-    @RabbitListener(queues = RabbitConfig.ARTICLE_QUEUE)
-    public void articleMessages(Long articleId, Channel channel,
-                                @Header(AmqpHeaders.DELIVERY_TAG) long tag) throws IOException {
+    @RabbitListener(queues = RabbitConfig.ARTICLE_QUEUE,containerFactory = "rabbitListenerContainerFactory")
+    public void articleMessages(Long articleId)  {
         try {
-            //★ BUG-34：本方法原先的方法签名里既没有 Channel/tag，也没有 basicAck。
-            //  全局配置 acknowledge-mode=manual，没有 ack 的消息会永久停留在 unacked 状态，
-            //  broker 每次应用重启都会把它重新投递 —— 于是已删除 / 已转草稿的文章 id
-            //  被反复塞回热榜 ZSet，任何对热榜的手工清理都不持久（重启即复活）。
-            //  修复分两步：① 补上 basicAck；② 入池前查库校验，只有「存在且 status=1」的公开文章才允许入池。
+
             Article article = articleService.getById(articleId);
             if (article == null) {
                 // 查不到有两种可能：a) 历史脏消息（该文章已被删除）；
@@ -125,11 +111,9 @@ public class CountConsumer {
                 // 文章存在但非公开（草稿）：确保它不在热榜池中（幂等兜底，主清理在 updateArticle）
                 redisTemplate.opsForZSet().remove(RedisKeyConstants.ARTICLE_HOT_KEY, String.valueOf(articleId));
             }
-            //手动返回ack
-            channel.basicAck(tag, false);
         } catch (Exception e) {
             log.error("文章入热榜消费失败，articleId={}", articleId, e);
-            channel.basicNack(tag, false, true);
+           throw e;
         }
     }
 }

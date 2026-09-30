@@ -6,21 +6,17 @@ import com.codemind.common.RagConstants;
 import com.codemind.community.entity.Article;
 import com.codemind.config.RabbitConfig;
 import com.codemind.knowledge.entity.Note;
-import com.rabbitmq.client.Channel;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.reader.markdown.MarkdownDocumentReader;
 import org.springframework.ai.reader.markdown.config.MarkdownDocumentReaderConfig;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
-import org.springframework.amqp.support.AmqpHeaders;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.stereotype.Component;
 
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Objects;
@@ -39,12 +35,9 @@ public class RagQueueMessage {
             .withIncludeBlockquote(true).build();
 
     //创建笔记创建文章向量化
-    @RabbitListener(queues = RabbitConfig.RAG_QUEUE)
-    public void ArticleNoteVector(RagMessageDTO ragMessageDTO, Channel channel,
-                                  @Header(AmqpHeaders.DELIVERY_TAG) long tag) throws IOException {
+    @RabbitListener(queues = RabbitConfig.RAG_QUEUE,containerFactory = "rabbitListenerContainerFactory")
+    public void ArticleNoteVector(RagMessageDTO ragMessageDTO)  {
         String key = "codemind:createArticleNote:rag:"+ragMessageDTO.getUuid();
-        // 重试计数的 key
-        String retryKey = "codemind:rag:retry:" + ragMessageDTO.getUuid();
         try {
             Boolean aBoolean = stringRedisTemplate.opsForValue().setIfAbsent(key, "1", 1, TimeUnit.MINUTES);
 
@@ -63,45 +56,20 @@ public class RagQueueMessage {
                     noteVectorStore(note,type);
                 }
             }
-            //手动返回ack
-            channel.basicAck(tag,false);
-            stringRedisTemplate.delete(retryKey);
         }catch (Exception e){
             stringRedisTemplate.delete(key);
-            Long retryCount = stringRedisTemplate.opsForValue().increment(retryKey);
-            if (retryCount != null && retryCount ==0){
-                stringRedisTemplate.expire(retryKey, 10, TimeUnit.MINUTES);
-            }
-            // 2. 第一次失败时，给计数器设置一个过期时间（比如10分钟），防止 Redis 内存泄漏
-            if (retryCount != null && retryCount == 1) {
-                stringRedisTemplate.expire(retryKey, 10, TimeUnit.MINUTES);
-            }
-
-            log.error("向量化失败，当前第 {} 次重试，messageId={}", retryCount, ragMessageDTO.getUuid(), e);
-            log.error(e.getMessage());
-            log.error(e.getStackTrace()[0].toString());
-            // 3. 判断次数
-            if (retryCount != null && retryCount <= 3) {
-                // 1~3次：重新入队，等待重试
-                channel.basicNack(tag, false, true); // requeue = true
-            } else {
-                // 超过3次：直接丢弃（或进入DLX）
-                log.error("重试已达3次，放弃重试并丢弃消息，messageId={}", ragMessageDTO.getUuid());
-                channel.basicNack(tag, false, false); // requeue = false
-                //  retryKey 清掉
-                stringRedisTemplate.delete(retryKey);
-            }
+            log.error("向量话失败，messageId={}", ragMessageDTO.getUuid(),e);
+            throw e;
 
         }
 
     }
 
     //修改笔记文章更新数据库
-    @RabbitListener(queues = RabbitConfig.RAG_UPDATE_QUEUE)
-    public void updateRag(RagMessageDTO messageDTO ,Channel channel,@Header(AmqpHeaders.DELIVERY_TAG) long tag) throws IOException {
+    @RabbitListener(queues = RabbitConfig.RAG_UPDATE_QUEUE,containerFactory = "rabbitListenerContainerFactory")
+    public void updateRag(RagMessageDTO messageDTO) {
         String key = "codemind:updateArticleNote:rag:"+messageDTO.getUuid();
-        // 重试计数的 key
-        String retryKey = "codemind:rag:retry:" + messageDTO.getUuid();
+
         try {
             Boolean aBoolean = stringRedisTemplate.opsForValue().setIfAbsent(key, "1", 1, TimeUnit.MINUTES);
 
@@ -155,31 +123,13 @@ public class RagQueueMessage {
                 }
             }
 
-
-            channel.basicAck(tag,false);
-            //处理成功删除重试次数
-            stringRedisTemplate.delete(retryKey);
-
         }catch (Exception e){
             stringRedisTemplate.delete(key);
-            //获取重试次数
-            Long retryCount = stringRedisTemplate.opsForValue().increment(retryKey);
-            if (retryCount != null && retryCount == 1) {
-                stringRedisTemplate.expire(retryKey, 10, TimeUnit.MINUTES);
-            }
-            log.error("向量化更新失败，当前第 {} 次重试，messageId={}",
-                    retryCount, messageDTO.getUuid(), e);
+            log.error("向量化更新失败，messageId={}",
+                    messageDTO.getUuid(), e);
             log.error(e.getMessage());
             log.error(e.getStackTrace()[0].toString());
-            if (retryCount != null && retryCount<=3){
-                channel.basicNack(tag,false,true);
-            }else {
-                channel.basicNack(tag,false,false);
-                log.error("重试已达3次，放弃重试并丢弃消息，messageId={}", messageDTO.getUuid());
-                stringRedisTemplate.delete(retryKey);
-            }
-
-
+            throw e;
         }
 
     }

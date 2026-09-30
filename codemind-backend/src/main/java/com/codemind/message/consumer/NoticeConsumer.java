@@ -6,19 +6,14 @@ import com.codemind.message.dto.MessageFollowDTO;
 import com.codemind.message.dto.MessageLikeDTO;
 import com.codemind.message.entity.Notification;
 import com.codemind.message.service.MessageService;
-import com.rabbitmq.client.Channel;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
-import org.springframework.amqp.rabbit.core.RabbitTemplate;
-import org.springframework.amqp.support.AmqpHeaders;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.stereotype.Component;
 import org.springframework.util.ObjectUtils;
 
-import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 @Slf4j
 @Component
@@ -27,8 +22,8 @@ public class NoticeConsumer {
     private StringRedisTemplate stringRedisTemplate;
     @Autowired
     private MessageService messageService;
-    @RabbitListener(queues = RabbitConfig.FOLLOW_NOTICE_QUEUE)
-    public void followMessage(MessageFollowDTO messageFollowDTO, Channel channel, @Header(AmqpHeaders.DELIVERY_TAG) long tag) throws Exception {
+    @RabbitListener(queues = RabbitConfig.FOLLOW_NOTICE_QUEUE,containerFactory = "rabbitListenerContainerFactory")
+    public void followMessage(MessageFollowDTO messageFollowDTO) {
         //幂等key
         String key = "codemind:message:follow:notice:"+messageFollowDTO.getMessageId();
         try {
@@ -45,20 +40,19 @@ public class NoticeConsumer {
                 //保存
                 messageService.save(message);
             }
-            channel.basicAck(tag,false); //返回ack
 
         } catch (Exception e) {
             //删除标记
             stringRedisTemplate.delete(key);
             log.error("消息通知消费失败，messageId={}",
                     messageFollowDTO.getMessageId(), e);
-            channel.basicNack(tag,false,true);
+            throw e;
         }
 
     }
     //点赞文章消息
-    @RabbitListener(queues = RabbitConfig.LIKE_NOTICE_QUEUE)
-    public void likeMessage(MessageLikeDTO messageLikeDTO, Channel channel, @Header(AmqpHeaders.DELIVERY_TAG) long tag) throws Exception {
+    @RabbitListener(queues = RabbitConfig.LIKE_NOTICE_QUEUE,containerFactory = "rabbitListenerContainerFactory")
+    public void likeMessage(MessageLikeDTO messageLikeDTO) {
         //幂等key
         String key = "codemind:message:like:notice:"+messageLikeDTO.getMessageId();
         try {
@@ -75,27 +69,26 @@ public class NoticeConsumer {
                 BeanUtils.copyProperties(messageLikeDTO,message);
                 // 消费端 save 前：
                 if (ObjectUtils.isEmpty(message.getUserId()) || message.getUserId().equals(message.getFromUserId())) {
-                    channel.basicAck(tag, false);   // 自嗨通知直接丢弃
+                    // 自嗨通知直接丢弃
                     return;
                 }
                 //保存
                 messageService.save(message);
             }
-            channel.basicAck(tag,false); //返回ack
 
         } catch (Exception e) {
             //删除标记
             stringRedisTemplate.delete(key);
             log.error("消息通知消费失败，messageId={}",
                     messageLikeDTO.getMessageId(), e);
-            channel.basicNack(tag,false,true);
+           throw e;
         }
 
     }
 
     //评论文章消息
-    @RabbitListener(queues = RabbitConfig.COMMENT_NOTICE_QUEUE)
-    public void commentMessage(MessageCommentDTO messageCommentDTO, Channel channel, @Header(AmqpHeaders.DELIVERY_TAG) long tag) throws Exception {
+    @RabbitListener(queues = RabbitConfig.COMMENT_NOTICE_QUEUE,containerFactory = "rabbitListenerContainerFactory")
+    public void commentMessage(MessageCommentDTO messageCommentDTO) {
         //幂等key
         String key = "codemind:message:comment:notice:"+messageCommentDTO.getMessageId();
         try {
@@ -111,20 +104,20 @@ public class NoticeConsumer {
                 BeanUtils.copyProperties(messageCommentDTO,message);
                 // 消费端 save 前：
                 if (ObjectUtils.isEmpty(message.getUserId()) || message.getUserId().equals(message.getFromUserId())) {
-                    channel.basicAck(tag, false);   // 自嗨通知直接丢弃
+                    // 自嗨通知直接丢弃
                     return;
                 }
                 //保存
                 messageService.save(message);
             }
-            channel.basicAck(tag,false); //返回ack
+
 
         } catch (Exception e) {
             //删除标记
             log.error("消息通知消费失败，messageId={}",
                     messageCommentDTO.getMessageId(), e);
             stringRedisTemplate.delete(key);
-            channel.basicNack(tag,false,true);
+          throw e;
         }
 
     }
