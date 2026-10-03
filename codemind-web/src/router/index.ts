@@ -19,6 +19,7 @@ import { noteRoutes } from './modules/note'
 import { userRoutes } from './modules/user'
 import { notifyRoutes } from './modules/notify'
 import { aiRoutes } from './modules/ai'
+import { adminRoutes } from './modules/admin'
 import { RouteName } from './routes-names'
 
 export { RouteName }
@@ -31,6 +32,7 @@ const routes: RouteRecordRaw[] = [
   ...userRoutes,
   ...notifyRoutes,
   ...aiRoutes,
+  ...adminRoutes,
   {
     path: '/:pathMatch(.*)*',
     name: RouteName.NOT_FOUND,
@@ -77,7 +79,18 @@ router.beforeEach(async (to) => {
     await userStore.fetchUnreadCount()
   }
 
-  // 4) 注册后从未设置过密码 → 强制去 /set-password（后端 1.13 / 2026-09-27）
+  // 4) 管理端页面：只保证「用户信息已就绪」，**刻意不做跳转**。
+  //    `isAdmin` 依赖 `userInfo.role`，而刷新页面后 Pinia 会丢 —— 先 `ensureUserInfo()`
+  //    再让页面判 `isAdmin`，否则会把管理员误拦成「无权限」。
+  //    不跳转的理由（设计说明 §0.1 纪律 2 + §0.2）：userInfo 是登录时拉一次的缓存，
+  //    管理员被降权后前端可能仍是 admin；反过来，若守卫在这里把非管理员跳走，
+  //    页面就永远没有机会渲染「无管理员权限」态，与 §6 的验收项冲突。
+  //    所以门控交给页面：页面按 `isAdmin` 预检 + 接口 403 兜底，两条路都渲染 403 态。
+  if (to.meta.requiresAdmin && userStore.isLoggedIn) {
+    await userStore.ensureUserInfo()
+  }
+
+  // 5) 注册后从未设置过密码 → 强制去 /set-password（后端 1.13 / 2026-09-27）
   //    ⚠️ 只认 `=== false`：字段缺失时是 undefined，写成取反会把所有老用户都拦进来。
   //    ⚠️ skipPasswordGuard：设置页自己必须跳过，否则会「自己跳自己」形成死循环。
   //    ⚠️ 登录页不拦：登录成功前不该被弹走（登录成功后由 LoginView 主动跳）。

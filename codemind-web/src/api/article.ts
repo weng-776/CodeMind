@@ -47,9 +47,18 @@ function buildArticleFormData(
 
 /* ==================== 文章 CRUD ==================== */
 
-/** 3.1 发布文章（multipart/form-data，需认证） */
+/**
+ * 3.1 发布文章（multipart/form-data，需认证）
+ *
+ * ⚠️ 返回值是**新建文章 id 的裸数字**（实测 `{"code":200,"message":"操作成功","data":32}`），
+ * **不是对象**。早期这里写成 `{ id: number }`，调用方 `res.id` 恒为 `undefined`，
+ * 结果「创建文章后跳到新文章详情」这条路径**从来没走通过** ——
+ * 只会静默退回「我的文章」列表（T20 修复）。
+ *
+ * 与 2.1 `createNote` 是同一类问题，写法刻意保持一致（`http.post<number>`）。
+ */
 export function createArticle(data: CreateArticleParams) {
-  return http.post<{ id: number }>('/article', buildArticleFormData(data))
+  return http.post<number>('/article', buildArticleFormData(data))
 }
 
 /** 3.2 编辑文章（multipart/form-data，需认证） */
@@ -111,9 +120,14 @@ export function unfavoriteArticle(articleId: number) {
 /**
  * 3.13 / 3.14 发布评论与回复评论（同一接口，靠 parentId 区分）
  * parentId = 0 或省略 → 一级评论；填评论 ID → 回复该评论
+ *
+ * ⚠️ 返回值同样是**新建评论 id 的裸数字**（实测 `{"code":200,"data":38}`），不是对象。
+ * 现有调用方（`ArticleDetailView` 的发布评论 / 回复）发完是**重新拉评论列表**、
+ * 不依赖这个 id，所以标错没有造成可见故障；但仍要改成 `number` ——
+ * 否则下一个人按 `{id}` 去用就会拿到 `undefined`（T20 一并修掉）。
  */
 export function createComment(data: CreateCommentParams) {
-  return http.post<{ id: number }>('/comment', data)
+  return http.post<number>('/comment', data)
 }
 
 /** 3.15 删除评论（需认证，逻辑删除） */

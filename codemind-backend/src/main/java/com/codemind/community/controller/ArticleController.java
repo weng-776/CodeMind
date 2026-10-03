@@ -63,9 +63,6 @@ public class ArticleController {
     @GetMapping("my")
     public Result<Page<MyArticleVO>> myArticleList(@RequestParam(defaultValue = "1") @Min(value = 1, message = "页码不能小于 1") Integer page,
                                                    @RequestParam(defaultValue = "10") @Max(value = 50, message = "每页条数不能超过 50") Integer size,
-                                                   //★ BUG-21 补齐：DTO 上的 @Min/@Max 管不到查询参数，这里是独立入口。
-                                                   //  不补的话 status=5 会被原样丢给 SQL（返回 200 + 空列表），
-                                                   //  前端拿不到「参数错」的信号。类上已有 @Validated，加注解即生效。
                                                    @RequestParam(required = false)
                                                    @Min(value = 0, message = "文章状态只能是 0(草稿) 或 1(正常)")
                                                    @Max(value = 1, message = "文章状态只能是 0(草稿) 或 1(正常)")

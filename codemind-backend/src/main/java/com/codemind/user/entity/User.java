@@ -26,6 +26,11 @@ public class User {
 
     private Integer status;
 
+    /**
+     * 角色：0=普通用户 1=管理员（见 UserConstants.USER_ROLE_*）
+     */
+    private Integer role;
+
     private Date createTime;
 
     private Date updateTime;

@@ -7,7 +7,11 @@
 
 ## 一、项目架构
 
-四层结构：**客户端 → 后端（鉴权 + 五大业务域 + MQ 消费者）→ 基础设施 → 外部 AI 服务**。
+四层结构：**客户端 → 后端（鉴权 + 六大业务域 + MQ 消费者）→ 基础设施 → 外部 AI 服务**。
+
+> 业务域原有五个（用户 / 知识库 / 社区 / 消息 / AI 助手），
+> **2026-10 新增管理端**（看板 / 用户治理 / 内容治理 / 死信队列），
+> 它走**独立的鉴权层**（`AdminInterceptor` 额外校验 `role`），与业务域的鉴权并存。
 
 ```mermaid
 flowchart LR
@@ -15,8 +19,8 @@ flowchart LR
 
     subgraph backend["后端 · Spring Boot 3.4 · :8080"]
         direction TB
-        Interceptor["CodeMindInterceptor<br/>读请求头 token → UserContext"]
-        domains["五大业务域<br/>用户 · 知识库 · 社区 · 消息 · AI 助手"]
+        Interceptor["CodeMindInterceptor<br/>AdminInterceptor（校验 role）"]
+        domains["六大业务域<br/>用户 · 知识库 · 社区 · 消息 · AI · 管理端"]
         Consumer["RabbitMQ 消费者<br/>异步计数 · 通知 · 向量化"]
     end
 
@@ -49,7 +53,9 @@ flowchart LR
 
 | 设计 | 说明 |
 |---|---|
-| 鉴权 | 拦截器读请求头 **`token`**（不是 `Authorization`），把 userId 放进 `UserContext`（ThreadLocal），请求结束清理 |
+| 鉴权 | `CodeMindInterceptor` 读请求头 **`token`**（不是 `Authorization`），把 userId 放进 `UserContext`（ThreadLocal），请求结束清理 |
+| 管理端鉴权 | `/api/admin/**` 额外挂 **`AdminInterceptor`**：在 token 校验之外**每次请求查库**取 `role` 并校验 `= 1` —— 用「每次查库」换「改角色立即生效」。**非管理员返回真 HTTP 403**，其余错误仍是 HTTP 200 + `code` |
+| 死信可运维 | 死信队列做成接口（查看 / 清空 / 重投）：查看用 `basicGet` 读完**不确认、重新入队**（只读）；重投回**原交换机**而非 DLX（投 DLX 会死循环） |
 | 缓存 | 文章详情 Cache Aside（`codemind:article:detail:{id}`）；浏览量 / 点赞数 / 热门榜都走 Redis，异步落库 |
 | 异步 | 计数、通知、RAG 向量化都走 RabbitMQ —— 写接口不等待这些副作用 |
 | 软删除 | 全表 `is_delete` + MyBatis-Plus `@TableLogic`，查询自动带 `is_delete = 0` |

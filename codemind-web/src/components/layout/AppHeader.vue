@@ -107,6 +107,20 @@ async function handleUserCommand(command: string) {
     case 'categories':
       await router.push({ name: RouteName.CATEGORY_MANAGE })
       break
+    /*
+     * 管理后台入口（仅管理员可见，T16）。
+     *
+     * 为什么放在用户下拉里而不是主导航：
+     *   主导航是「内容消费」的动线（首页/社区/知识库/AI/消息），
+     *   管理后台是低频的运维入口，放进去会给所有普通用户增加一个
+     *   点不动的导航项，也会稀释导航的信息密度。
+     *   `v-if="userStore.isAdmin"` 只是**界面门控**：真权限在后端
+     *   AdminInterceptor（每次请求查库），降权后前端缓存可能仍显示本入口，
+     *   所以管理页自身必须能渲染 403 态。
+     */
+    case 'admin':
+      await router.push({ name: RouteName.ADMIN_DASHBOARD })
+      break
     case 'notifications':
       await router.push({ name: RouteName.NOTIFICATIONS })
       break
@@ -201,6 +215,10 @@ async function handleLogout() {
                 </el-dropdown-item>
                 <el-dropdown-item command="categories">
                   <el-icon><FolderOpened /></el-icon>分类管理
+                </el-dropdown-item>
+                <!-- 仅管理员可见：普通用户看不到这个入口（真权限在后端） -->
+                <el-dropdown-item v-if="userStore.isAdmin" command="admin">
+                  <el-icon><Setting /></el-icon>管理后台
                 </el-dropdown-item>
                 <el-dropdown-item command="notifications" divided>
                   <el-icon><Bell /></el-icon>消息通知

@@ -2,7 +2,7 @@
 
 > 面向开发者的智能知识管理与技术社区平台 —— 个人知识库、技术社区、消息通知与 RAG 智能助手的一体化后端。
 
-一个基于 Spring Boot 3 + Spring AI 的单体后端，覆盖 **用户、个人知识库、技术社区、消息通知、AI 智能助手** 五个业务域，共 **59 个 REST 接口**，全部为后端独立设计与实现。
+一个基于 Spring Boot 3 + Spring AI 的单体后端，覆盖 **用户、个人知识库、技术社区、消息通知、AI 智能助手** 五个业务域，共 **75+ 个 REST 接口**，全部为后端独立设计与实现。
 
 项目的重点不在接口数量，而在几个有真实取舍的设计：**两级评论的「写入压平」模型**、**点赞与收藏计数链路的缓存 + 异步最终一致**、以及 **RAG 的写入侧权限收口**。
 
@@ -55,6 +55,7 @@ Spring AI 的子依赖各司其职：
 | 社区 | 19 | 文章 CRUD、列表 / 热门 / 最新 / 按标签、点赞、收藏、两级评论 |
 | 消息通知 | 5 | 通知列表、未读数、单条已读、全部已读、删除消息 |
 | AI 助手 | 11 | 会话 CRUD（含删除）、历史消息、统一聊天（流式）、文章与笔记的总结 / 知识点 / 面试题 |
+| **管理端** | **15** | 数据看板、用户治理（封禁 / 解封）、内容治理（文章 / 笔记 / 评论的上下架与删除）、死信队列（查看 / 清空 / 重投） |
 
 ---
 
@@ -105,6 +106,32 @@ RabbitMQ 拓扑为 3 组交换机、9 个队列，覆盖计数落库、缓存失
 - 业务异常统一由 `BusinessException` 静态工厂抛出（`badRequest` / `notFound` / `forbidden`…），全局异常处理器按 4xx / 5xx 分流日志级别，并对 `NoResourceFoundException`、`HttpRequestMethodNotSupported` 等框架异常给出正确状态码
 - **硬规则：「不存在」（404）与「无权限」（403）必须分开报** —— 先查存在性再比对归属。合并成「XX 不存在或无权操作」既给不出可区分状态码，也是越权探测的信息面
 
+### 5. 管理端：权限收口在拦截器，死信队列做成可运维
+
+管理端（`/api/admin/**`）与业务模块是**两套鉴权**，这样业务侧的改动不会影响管理侧：
+
+- 业务侧走 `CodeMindInterceptor`（验 token → `UserContext`）；
+  **管理侧额外挂 `AdminInterceptor`**，它在 token 校验之外**每次请求都查库**取 `role` 并校验 `= 1`
+  —— 用「每次查库」换「改角色立即生效」，管理端这种低频场景完全值得
+- **「非管理员」返回的是真 HTTP 403**（`response.setStatus(403)`），
+  而参数越界 / 资源不存在仍是 HTTP 200 + `code` —— **前端一律判 `code`，不要判 HTTP 状态码**
+- 路径前缀统一 `/api/admin/**`，拦截器按前缀匹配，新增管理接口不会漏鉴权
+
+**死信队列做成可运维**是这个模块里最有价值的一块：RabbitMQ 拓扑有 3 组交换机、9 个队列，
+消费端手动 ACK，重试耗尽后消息进死信队列。如果不做成接口，出问题时只能登管理台手工处理。
+
+- **查看**：`basicGet` 逐条取，读完**不确认、重新入队** —— 预览是只读的，不会吃掉消息
+- **重投**：把消息投回**它原本的交换机与 routingKey**（**不是 DLX**，投 DLX 会死循环），
+  单次上限 500 条，剩余的下次再投
+- **清空**：不可逆，前端必须二次确认
+- 三个接口共用一份**队列名白名单**，非法名字统一 400，避免把 broker 的异常兜成 500
+
+> 一个踩过的坑：给已有队列**新加** `x-dead-letter-exchange` 会 `PRECONDITION_FAILED(406)`
+> —— RabbitMQ 不允许修改已存在队列的参数，必须先删队列再声明。
+>
+> 另一个：**`x-death` 是 RabbitMQ 系统保留头，发布时会被清空** ——
+> 想验死信头只能造真死信，用管理端 API 伪造灌进去到达时就是 `[]`。
+
 ---
 
 ## 快速开始
@@ -152,6 +179,7 @@ AI 会话记忆表由应用启动时也会自动创建（`spring.ai.chat.memory.
 | `RABBITMQ_HOST` | RabbitMQ 地址 |
 | `MINIO_ENDPOINT` / `MINIO_ACCESS_KEY` / `MINIO_SECRET_KEY` | MinIO 连接与凭据 |
 | `MILVUS_NAME` / `MILVUS_PASSWORD` | Milvus 账号（默认 `root` / `Milvus`） |
+| `MILVUS_HOST` | Milvus 地址（虚拟机 `192.168.238.186`） |
 | `ALI_API_KEY` | 通义千问 Embedding API Key（DashScope） |
 | `DS_API_KEY` | DeepSeek 对话模型 API Key |
 
@@ -195,6 +223,7 @@ com.codemind
 ├── common/            Result<T> 与常量（RedisKey / User / Note / Article / Message / Rag）
 ├── config/            SpringMvcConfig(拦截器)、MybatisPlus、Redisson、Rabbit、Minio、
 │                      SpringAi 配置与 properties/
+│   └── interceptor/   CodeMindInterceptor(业务鉴权) + AdminInterceptor(管理端 role 校验)
 ├── context/           UserContext —— ThreadLocal 持有当前登录 userId
 ├── exceptionhandler/  BusinessException、GlobalExceptionHandler
 ├── utils/             JwtHelper、MD5Util、RegexUtils、FileUploadService
@@ -202,7 +231,8 @@ com.codemind
 ├── knowledge/         知识库域：笔记、分类（树）、标签
 ├── community/         社区域：文章、标签、评论、点赞、收藏、热门 / 最新
 ├── message/           消息通知域：notification + NoticeConsumer
-└── ai/                AI 域：会话、RAG、工具、提示词
+├── ai/                AI 域：会话、RAG、工具、提示词
+└── admin/             管理端域：看板、用户治理、内容治理、死信队列（**独立于业务域的鉴权层**）
 ```
 
 每个业务域内部结构一致：`entity / mapper / service / service.impl / controller / dto / vo`。分层约定：
@@ -224,7 +254,7 @@ com.codemind
 | 形式 | 位置 |
 |---|---|
 | 在线调试 | 启动后访问 `http://localhost:8080/doc.html`（Knife4j） |
-| Markdown 文档 | `API接口文档.md` —— **接口清单与必要约定**（59 个接口一览：方法 / 路径 / 认证 / 说明） |
+| Markdown 文档 | `API接口文档.md` —— **接口清单与必要约定**（**75 个接口**一览：方法 / 路径 / 认证 / 说明；含管理端 15 个） |
 | 建表语句 | `codemind建表语句.sql`（14 张表 + 索引优化，每个索引都注明了依据的查询） |
 
 约定：认证接口在请求头携带 `token`；分页参数 `page`（≥1）、`size`（≤50），响应中回显 `current` / `size` / `total` / `pages`。
@@ -249,5 +279,7 @@ com.codemind
 | 文件 | 内容 |
 |---|---|
 | `AGENTS.md` | 协作总纲：技术栈、关键机制、约定与踩坑记录 |
-| `API接口文档.md` | 59 个接口一览 + 通用约定（认证、分页、错误码） |
+| `API接口文档.md` | **75 个接口**一览 + 通用约定（认证、分页、错误码） |
 | `codemind建表语句.sql` | 14 张表的 DDL + 索引优化（每个索引都注明了依据的查询） |
+| `管理端设计说明.md` | 管理端的产品目标、接口设计、权限模型与验收口径 |
+| `管理端接口实测报告.md` | 管理端 15 个接口的真机实测报告（含每条结论的证据与现场还原记录） |

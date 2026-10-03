@@ -15,7 +15,7 @@ spring:
     vectorstore:
       milvus:
         client:
-          host: 127.0.0.1
+          host: ${MILVUS_HOST}
           port: 19530
           username: ${MILVUS_NAME}
           password: ${MILVUS_PASSWORD}

@@ -2,6 +2,10 @@
 
 > **Base URL** `/api` ｜ **认证** 请求头 `token: <jwt>`（注意不是 `Authorization`）
 > ｜ **在线调试** 启动后访问 `/doc.html`（Knife4j）
+>
+> **接口分两层**：业务模块（用户 / 知识库 / 社区 / 消息 / AI）面向所有登录用户；
+> **管理端模块**（`/api/admin/**`）在登录之外**还要求 `role = 1`（管理员）**，
+> 由 `AdminInterceptor` 每次请求查库校验。
 
 完整版（含每个接口的请求/响应示例、错误场景、边界说明）在项目私有仓库中维护，
 本文件只列**接口清单与必要约定**，方便快速了解接口全貌。
@@ -31,7 +35,7 @@
 | 200 | 成功 | — |
 | 400 | 参数错误 | 缺参数、格式非法、枚举越界、文件不合规、`@Valid` 失败 |
 | 401 | 未登录 / 凭证错误 | token 过期、验证码或密码错误 |
-| 403 | 无权限 | 操作别人的资源 |
+| 403 | 无权限 | 操作别人的资源；**非管理员访问 `/api/admin/**`**（见管理端模块） |
 | 404 | 资源不存在 | 文章 / 笔记 / 分类 / 评论 / 会话 / 通知不存在 |
 | 405 | 方法不支持 | 该 POST 却发 GET |
 | 409 | 状态冲突 | 重复提交、同名校验命中 |
@@ -132,6 +136,61 @@
 | 5.10 | 笔记生成面试题 | POST | `/api/ai/notes/{noteId}/interview-questions` | 需要 | 根据指定笔记的标题和正文生成面试题 |
 | 5.11 | 删除 AI 会话 | DELETE | `/api/ai/DeleteConversation/{conversationId}` | 需要 | 删除指定 AI 会话（**后端会同时清掉该会话的记忆**） |
 
+### 管理端模块
+
+> **🔴 本模块的失败形态与其它模块不同**（最容易踩的地方）：
+>
+> | 场景 | 传输层 | 响应体 |
+> |---|---|---|
+> | 未带 token | **HTTP 401** | `{code:401, message:"登陆过期请重新登陆"}` |
+> | 已登录但**不是管理员** | **HTTP 403** | `{code:403, message:"无管理员权限"}` |
+> | 参数越界 / 资源不存在 | **HTTP 200** | `{code:400 / 404, ...}` |
+>
+> 即：**「非管理员」走的是真 HTTP 403**（`AdminInterceptor` 用 `response.setStatus(403)`），
+> 而其余业务错误仍是 HTTP 200 + `code`。**一律判响应体的 `code`，不要判 HTTP 状态码。**
+> ⚠️ 因为 403 走 axios 的 error 分支，前端拦截器会把 message 覆盖成通用文案
+> （「没有权限执行该操作」），**后端那句「无管理员权限」前端收不到** —— 页面要自己写文案。
+
+| # | 接口 | 方法 | 路径 | 认证 | 说明 |
+|---|---|---|---|---|---|
+| 6.1 | 数据看板 | GET | `/api/admin/dashboard/overview` | **管理员** | 12 个统计数字：6 个总量 + 6 个今日新增（「今日」按 **GMT+8** 统计） |
+| 6.2 | 用户列表 | GET | `/api/admin/users` | **管理员** | 分页 + `keyword`（**同时模糊匹配手机号与昵称**） |
+| 6.3 | 修改用户状态 | PUT | `/api/admin/users/{userId}/status` | **管理员** | 封禁 / 解封，`status` = 0 禁用 / 1 正常。**`status` 是 query 参数，不是 body**。**封自己返回 400**「不能修改自己的账号状态」 |
+| 6.4 | 文章列表 | GET | `/api/admin/articles` | **管理员** | 分页 + `keyword` + `status`（0 草稿 / 1 公开）。**含草稿 —— 全量视角** |
+| 6.5 | 文章上下架 | PUT | `/api/admin/articles/{articleId}/status` | **管理员** | `status` 是 query 参数（0 下架 / 1 公开） |
+| 6.6 | 删除文章 | DELETE | `/api/admin/articles/{articleId}` | **管理员** | **不可逆**：连带删除其标签、评论、点赞、收藏，并从热门榜与向量库移除 |
+| 6.7 | 笔记列表 | GET | `/api/admin/notes` | **管理员** | 分页 + `keyword` + `status` + `visibility`。**含草稿与私密 —— 全量视角** |
+| 6.8 | 笔记状态 | PUT | `/api/admin/notes/{noteId}/status` | **管理员** | `status` 是 query 参数（0 草稿 / 1 正常） |
+| 6.9 | 删除笔记 | DELETE | `/api/admin/notes/{noteId}` | **管理员** | 不可逆 |
+| 6.10 | 评论列表 | GET | `/api/admin/comments` | **管理员** | 分页 + `articleId`（限定某篇文章）+ `keyword`（模糊匹配评论内容） |
+| 6.11 | 删除评论 | DELETE | `/api/admin/comments/{commentId}` | **管理员** | 不可逆 |
+| 6.12 | 死信队列概要 | GET | `/api/admin/mq/queues` | **管理员** | **固定 6 条**，每条 `queueName` / `messageCount` / `consumerCount` |
+| 6.13 | 查看队列消息 | GET | `/api/admin/mq/queues/{queue}/messages` | **管理员** | 返回 **`string[]`（消息正文原文数组，不分页）**。**只读**：读完不确认、重新入队，不会吃掉消息 |
+| 6.14 | 清空队列 | DELETE | `/api/admin/mq/queues/{queue}/messages` | **管理员** | **不可逆** |
+| 6.15 | 重投死信 | POST | `/api/admin/mq/queues/{queue}/replay` | **管理员** | 把消息投回**它原本的交换机**（**不是 DLX**，投 DLX 会死循环）。返回本次重投成功条数，**单次上限 500** |
+
+**死信队列白名单**（6.13 / 6.14 / 6.15 三处共用；非法队列名统一返回 400「不是死信队列：xxx」）
+
+```
+codemind.cache.queue.dead
+codemind.follow.notice.queue.dead
+codemind.like.notice.queue.dead
+codemind.comment.notice.queue.dead
+codemind.arg.article-note.queue.dead
+codemind.arg.update.article-note.queue.dead
+```
+
+**其它要点**
+
+- 管理端列表 VO **一律不含正文 `content`**（正文是长文本，列表页不需要），但**含内嵌的 `author` 对象**
+- 管理端是**全量视角**：文章列表含草稿、笔记列表含草稿与私密 —— 这是**设计意图**而非越权，
+  但页面**必须把「草稿 / 私密」标出来**，否则管理员会误以为内容已经公开
+- `replay` 的响应 `message` 里可能带「队列还剩 M 条，请再次执行」（超单次上限）→
+  **判据要用「重投后重新拉 6.12 看 `messageCount` 是否为 0」，不要按 `message` 文本分支**
+- `GET /api/user/info` 的 **`role`** 字段（0 普通 / 1 管理员）**只用于前端界面门控**；
+  真正的权限判定在 `AdminInterceptor`，它**每次请求都查库**取 role，所以**改角色立即生效**，
+  而前端 `userInfo` 是登录时的缓存 → **每个管理页都必须能渲染 403 态**
+
 ### 附：消息通知的 `type` 取值
 
 | type | 类型 | 说明 |
@@ -145,7 +204,7 @@
 
 ---
 
-**接口总数：60**（用户 13 ／ 知识库 12 ／ 社区 19 ／ 消息 5 ／ AI 11）
+**接口总数：75**（用户 13 ／ 知识库 12 ／ 社区 19 ／ 消息 5 ／ AI 11 ／ **管理端 15**）
 
 **说明**
 

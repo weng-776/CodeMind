@@ -3,7 +3,8 @@
 > 面向开发者的智能知识管理与技术社区平台 —— 个人知识库、技术社区、消息通知与 RAG 智能助手。
 
 一个前后端分离的全栈项目：**后端** Spring Boot 3 + Spring AI 单体服务，**前端** Vue 3 + TypeScript。
-覆盖用户、个人知识库、技术社区、消息通知、AI 智能助手五个业务域，共 **59 个 REST 接口**，
+覆盖用户、个人知识库、技术社区、消息通知、AI 智能助手五个业务域，
+外加一个**管理后台**（数据看板 / 用户治理 / 内容治理 / 死信队列），共 **75 个 REST 接口**，
 全部为独立设计与实现。
 
 ```
@@ -22,6 +23,7 @@ codemind-web/        前端 · Vue 3 + TypeScript + Vite · 5173
 | 社区 | 文章 CRUD、列表 / 热门 / 最新 / 按标签、点赞、收藏、两级评论 |
 | 消息通知 | 通知列表、未读数、单条 / 全部已读、删除 |
 | AI 智能助手 | 会话管理、流式对话、Tool Calling、文章与笔记的总结 / 知识点 / 面试题（RAG） |
+| **管理后台** | 数据看板（12 项统计）、用户治理（封禁 / 解封）、内容治理（文章 / 笔记 / 评论的上下架与删除）、死信队列运维（查看 / 清空 / 重投） |
 
 ---
 
@@ -52,8 +54,11 @@ Vue 3（`<script setup>`）+ TypeScript + Vite + Element Plus + Pinia + Vue Rout
 （项目架构、一次 AI 对话的完整链路、RAG 向量化的写入链路，另附 SVG / PNG）。
 
 ```
-浏览器 → 后端（拦截器鉴权 + 五大业务域 + MQ 消费者）→ MySQL / Redis / RabbitMQ / MinIO / Milvus
+浏览器 → 后端（拦截器鉴权 + 六大业务域 + MQ 消费者）→ MySQL / Redis / RabbitMQ / MinIO / Milvus
                                                    → DeepSeek（对话）+ 通义千问（Embedding）
+
+鉴权分两层：业务域走 CodeMindInterceptor（验 token）；/api/admin/** 额外挂 AdminInterceptor
+（每次请求查库校验 role = 1），管理端与业务域的鉴权互不影响。
 ```
 
 ---
@@ -121,17 +126,19 @@ codemind-backend/
 │   ├── knowledge/           知识库域（笔记 / 分类 / 标签）
 │   ├── community/           社区域（文章 / 评论 / 点赞 / 收藏）
 │   ├── message/             消息通知域
-│   └── ai/                  AI 域（会话 / RAG / 工具 / 提示词）
+│   ├── ai/                  AI 域（会话 / RAG / 工具 / 提示词）
+│   └── admin/               管理端域（看板 / 用户 / 内容 / 死信队列，独立鉴权层）
 ├── src/main/resources/      application.yml、mapper/*.xml
 ├── codemind建表语句.sql       14 张表 DDL + 索引优化
 ├── 架构与AI流程.md            架构图与 AI 流程图
-└── API接口文档.md             59 个接口一览
+├── 管理端设计说明.md          管理端的产品目标、接口设计与权限模型
+└── API接口文档.md             75 个接口一览（含管理端 15 个）
 
 codemind-web/
 ├── src/
 │   ├── api/                 请求层（axios 封装 + aiStream 流式）
 │   ├── composables/         useAiChat / useAiStream / useAiContext
-│   ├── views/               auth / home / article / note / user / notify / ai
+│   ├── views/               auth / home / article / note / user / notify / ai / admin
 │   ├── components/  stores/  router/  types/  utils/  styles/
 ├── scripts/                 验证脚本（离线套件 + 端到端）
 └── API接口文档.md             接口清单与通用约定
@@ -143,11 +150,14 @@ codemind-web/
 
 | 文档 | 内容 |
 |---|---|
-| `codemind-backend/API接口文档.md` | 59 个接口一览 + 通用约定（认证、分页、错误码） |
+| `codemind-backend/API接口文档.md` | **75 个接口**一览 + 通用约定（认证、分页、错误码） |
 | `codemind-backend/架构与AI流程.md` | 架构图、AI Agent / Tool / RAG 流程图 |
 | `codemind-backend/codemind建表语句.sql` | 14 张表 DDL，每个索引都注明依据的查询 |
 | `codemind-backend/AGENTS.md` | 后端协作总纲：关键机制、约定与踩坑记录 |
-| `codemind-web/README.md` | 前端说明：环境变量、硬约束、命令 |
+| `codemind-backend/管理端设计说明.md` | 管理端的产品目标、接口设计、权限模型与验收口径 |
+| `codemind-backend/管理端接口实测报告.md` | 管理端 15 个接口的真机实测报告（含每条结论的证据） |
+| `codemind-web/README.md` | 前端说明：环境变量、硬约束、命令、管理后台 |
+| `codemind-web/交付前自检报告.md` | 前端交付前自检（逐项结果与证据） |
 
 ---
 
@@ -157,6 +167,11 @@ codemind-web/
 - **计数链路**：点赞 / 收藏 / 浏览量写 Redis，经 RabbitMQ 异步刷回 MySQL（最终一致）；详情走 Cache Aside，配空值缓存防穿透、TTL 抖动防雪崩
 - **RAG 权限收口在写入侧**：只向量化「公开且已发布」的内容，私密内容永不入库 —— 检索侧因此无需再做权限过滤
 - **AI 流式响应是裸文本流**（`text/html;charset=UTF-8`），不是 JSON 也不是 SSE，前端用 `fetch` + `ReadableStream` 并做流式 UTF-8 解码
+- **管理端鉴权与业务域分开**：`/api/admin/**` 额外挂 `AdminInterceptor`，**每次请求查库**校验 `role = 1`
+  —— 用「每次查库」换「改角色立即生效」。**非管理员返回真 HTTP 403**（其余错误仍是 HTTP 200 + `code`），
+  前端因此必须按 `code` 判失败、不能按 HTTP 状态码
+- **死信队列做成可运维的接口**：查看用 `basicGet` 读完**不确认、重新入队**（只读，不吃消息）；
+  重投投回**原交换机**而非 DLX（投 DLX 会死循环），单次上限 500 条
 
 ---
 

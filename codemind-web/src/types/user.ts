@@ -55,6 +55,18 @@ export interface UserInfoVO {
    * 字段缺失时是 `undefined`，取反会把所有老用户都判成「没设过密码」并弹进设置页。
    */
   hasPassword: boolean
+  /**
+   * 用户角色：`0` = 普通用户，`1` = 管理员（2026-10-02 后端新增，对应
+   * `UserConstants.USER_ROLE_*`；由 `BeanUtils.copyProperties` 自动带出）。
+   *
+   * ⚠️ 声明为可选是**防御性**的：老版本后端不返回该字段，取到 `undefined`
+   *    时按「非管理员」处理（`role === UserRole.ADMIN` 自然为 false），
+   *    不会把所有人误判成管理员。
+   * ⚠️ **它只是界面门控，不是权限依据**：真正的判定在后端 `AdminInterceptor`
+   *    （每次请求查库取 role）。前端守卫只做体验优化，
+   *    所以每个管理端页面都必须能渲染接口 403 的兜底态。
+   */
+  role?: number
 }
 
 /** 他人主页信息（1.7 GET /api/user/profile/{userId}） */

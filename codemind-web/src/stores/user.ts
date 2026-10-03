@@ -9,6 +9,7 @@ import { defineStore } from 'pinia'
 
 import * as userApi from '@/api/user'
 import * as notifyApi from '@/api/notify'
+import { UserRole } from '@/types/admin'
 import type { UserInfoVO } from '@/types/user'
 import { getToken, getUserIdFromJwt, removeToken, setToken } from '@/utils/auth'
 
@@ -40,6 +41,19 @@ export const useUserStore = defineStore('user', () => {
   const userName = computed(() => userInfo.value?.userName ?? '')
 
   const avatar = computed(() => userInfo.value?.avatar ?? '')
+
+  /**
+   * 当前用户是否管理员（界面门控用）。
+   *
+   * ⚠️ 三条纪律（`管理端前端设计说明.md` §0.1）：
+   *   1. 这只是**界面门控，不是权限依据** —— 真判定在后端 `AdminInterceptor`。
+   *   2. `userInfo` 是**登录时拉一次的缓存**：管理员被降权后，这里可能仍为 true。
+   *      → 所以每个管理端页面都必须能渲染接口 403 的兜底态，不能只靠这个 getter。
+   *   3. 刷新页面时 Pinia 会丢，`userInfo` 可能还没加载 → 判 `isAdmin` 前必须确保
+   *      `infoLoaded`（路由守卫里 `ensureUserInfo()` 已负责）。
+   *      未加载时这里返回 false，属于「宁可不显示入口」，不会误放行。
+   */
+  const isAdmin = computed(() => userInfo.value?.role === UserRole.ADMIN)
 
   /* ==================== actions ==================== */
 
@@ -121,6 +135,7 @@ export const useUserStore = defineStore('user', () => {
     userId,
     userName,
     avatar,
+    isAdmin,
     // actions
     setAuthToken,
     fetchUserInfo,

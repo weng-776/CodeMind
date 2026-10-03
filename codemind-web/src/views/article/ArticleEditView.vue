@@ -1,21 +1,30 @@
 <script setup lang="ts">
 /**
- * 文章发布 / 编辑页（同一组件两种模式，靠路由名区分）：
- *   发布 → POST /api/article ｜ 编辑 → PUT /api/article/{id}。
+ * 文章发布 / 编辑页
+ * ------------------------------------------------------------------
+ * 同一个组件承担两种模式：
+ *   发布  → POST /api/article        （路由 /articles/create）
+ *   编辑  → PUT  /api/article/{id}   （路由 /articles/:id/edit）
+ * 靠路由名区分，避免两份几乎相同的表单代码。
  *
  * 关键设计：
- *   1. 提交格式是 **multipart/form-data**，封面是**文件字段 `file`** 而非 URL
- *      （FormData 统一在 api/article.ts 组装）。
- *   2. 编辑模式必须**先回显再提交**，否则保存会把内容清空。
- *   3. **tagIds 传空数组 = 清空标签**，所以不能「空数组就跳过不发」。
- *      候选集来自 2.12 `GET /api/tag/list`；候选加载失败不影响保存，已有 tags 原样回传。
- *   4. 编辑时**不传 file = 保留原封面**，没选新文件不能塞空 file。
- *   5. 双栏实时预览，Tab 窄屏退化为单栏可切换。
- *   6. 草稿与发布走同一接口，只差 status；发布前必须有标题与正文。
+ *   1. **提交格式是 multipart/form-data，不是 JSON**（3.1 / 3.2 已改为表单接口）。
+ *      封面是**文件字段 `file`**，不是 URL 字符串 —— 与笔记接口一致，
+ *      FormData 组装统一放在 api/article.ts 里完成。
+ *   2. **编辑模式必须回显后再提交**：先 GET 详情拿 content/tagIds，
+ *      否则保存时会把内容清空。
+ *   3. **编辑时 tagIds 传空数组 = 清空标签**（文档明说）。所以不能
+ *      「空数组就跳过不发」——必须原样提交，否则用户清不掉标签。
+ *      标签候选集来自 2.12 `GET /api/tag/list`（需登录、无分页），实测可用；
+ *      候选集加载失败也不影响保存 —— 已有 tags 仍然原样回传。
+ *   4. **编辑时 file 不传 = 保留原封面**，所以「没选新文件」时不能往 FormData 里塞空 file。
+ *   5. 双栏实时预览：左侧写 Markdown，右侧用同一套渲染管线预览。
+ *      Tab 窄屏时退化为单栏并可切换。
+ *   6. 草稿与发布走同一接口，只差 status。发布前必须有标题与正文。
  *   7. 离开前有未保存改动时拦截（onBeforeRouteLeave + beforeunload）。
  *
- * 封面用原生 `<input type="file">` 而非 el-upload：只需要 File 对象交给 axios，
- * el-upload 自带上传行为反而要额外压制。
+ * 封面用原生 <input type="file"> 而不是 el-upload：只需要拿到 File 对象交给 axios，
+ * 用 el-upload 反而要额外压制它自带的上传行为。
  */
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
@@ -238,14 +247,14 @@ async function submit(status: ContentStatus) {
       resetBaseline()
       void router.push({ name: RouteName.ARTICLE_DETAIL, params: { id: String(articleId.value) } })
     } else {
-      const res = await createArticle(payload)
+      // 3.1 的 data 是**新建文章 id 的裸数字**（不是对象），实测 `{"data":32}`
+      const newId = await createArticle(payload)
       ElMessage.success(status === ContentStatus.DRAFT ? '草稿已保存' : '文章已发布')
       resetBaseline()
-      const newId = res?.id
-      if (newId !== undefined && newId !== null) {
+      if (typeof newId === 'number' && Number.isFinite(newId)) {
         void router.push({ name: RouteName.ARTICLE_DETAIL, params: { id: String(newId) } })
       } else {
-        // 后端没返回 id 时不能猜，退回列表
+        // 后端没回 id 时不能猜，退回「我的文章」，至少不把用户留在空编辑器里
         void router.push({ name: RouteName.MY_ARTICLES })
       }
     }

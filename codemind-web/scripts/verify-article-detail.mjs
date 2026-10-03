@@ -251,7 +251,15 @@ const stubServer = http.createServer(async (req, res) => {
   /* ---- 文章写操作 ---- */
   if (url.pathname === '/api/article' && req.method === 'POST') {
     if (stub.createFails) return fail('创建失败')
-    return json({ id: 7777 })
+    /*
+     * ⚠️ 这里必须返回**裸数字**，不能返回 `{ id: 7777 }`。
+     *
+     * 真实后端 `POST /api/article` 的响应是 `{"code":200,"data":32}` —— `data` 就是 id 本身
+     * （T20 已实测并修正前端类型标注）。本桩早期写成对象，恰好「配合」了前端的
+     * 错误标注（`res?.id`），于是掩盖了「创建后跳不到新文章详情」这个 bug；
+     * T20 修好前端后，这条断言（`/articles/7777`）立刻由绿转红 —— **是桩过时了，不是产品退化**。
+     */
+    return json(7777)
   }
   if (url.pathname.match(/^\/api\/article\/\d+$/) && req.method === 'PUT') {
     return json(null)

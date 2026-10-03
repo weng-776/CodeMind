@@ -39,6 +39,12 @@ export const RouteName = {
   /* AI */
   AI_CHAT: 'ai-chat',
 
+  /* 管理后台（仅管理员可见；真权限在后端 AdminInterceptor） */
+  ADMIN_DASHBOARD: 'admin-dashboard',
+  ADMIN_USERS: 'admin-users',
+  ADMIN_CONTENT: 'admin-content',
+  ADMIN_MQ: 'admin-mq',
+
   /* 异常 */
   NOT_FOUND: 'not-found',
 } as const
